@@ -9,5 +9,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const fetchUserProfile = async (username: string = "rangga.ai") => {
- 
+export const fetchUserProfile = async (
