@@ -242,6 +242,57 @@ export const signInWithEmail = async ({ email, password }: { email: string; pass
   return data;
 };
 
+export const signUpWithEmail = async ({
+  email,
+  password,
+  displayName,
+  username,
+}: {
+  email: string;
+  password: string;
+  displayName: string;
+  username: string;
+}) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    console.error('[supabase] signUpWithEmail error:', error);
+    throw error;
+  }
+
+  const authUser = data.user;
+
+  if (authUser) {
+    const cleanUsername = username || email.split('@')[0].toLowerCase().replace(/[^a-z0-9.]+/g, '');
+
+    const { error: profileError } = await supabase.from('users').insert({
+      auth_user_id: authUser.id,
+      username: cleanUsername,
+      email,
+      display_name: displayName || cleanUsername,
+      headline: 'OmniHub Solopreneur',
+      bio: 'Building products, services, and digital business with OmniHub.',
+      avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300',
+      cover_url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1600',
+      website_url: '',
+      social_links: [],
+      shop_name: `${displayName || cleanUsername}'s Store`,
+      shop_slug: `${cleanUsername}-store`,
+      shop_description: 'My OmniHub digital shop.',
+      role: 'seller',
+    });
+
+    if (profileError) {
+      console.warn('[supabase] profile creation skipped or failed:', profileError.message);
+    }
+  }
+
+  return data;
+};
+
 export const signOutUser = async () => {
   const { error } = await supabase.auth.signOut();
 
