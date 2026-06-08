@@ -110,7 +110,7 @@ export const createNewProduct = async (productData: Record<string, any>) => {
   return data;
 };
 
-function createDownloadToken(productId: string, buyerEmail: string) {
+function createDownloadTokenValue(productId: string, buyerEmail: string) {
   const safeEmail = buyerEmail || 'guest';
   return `dl_${productId}_${safeEmail}_${Date.now()}`
     .toLowerCase()
@@ -118,7 +118,7 @@ function createDownloadToken(productId: string, buyerEmail: string) {
 }
 
 export const processTransaction = async (transactionData: Record<string, any>) => {
-  const downloadToken = createDownloadToken(
+  const downloadToken = createDownloadTokenValue(
     transactionData.product_id || 'product',
     transactionData.buyer_email || 'guest'
   );
@@ -166,6 +166,11 @@ export const confirmPayment = async (transactionId: string) => {
   }
 
   return data;
+};
+
+export const generateDownloadToken = async (productId: string, transactionHash: string) => {
+  const token = createDownloadTokenValue(productId || 'product', transactionHash || 'txn');
+  return token;
 };
 
 export const fetchCommunityPosts = async () => {
