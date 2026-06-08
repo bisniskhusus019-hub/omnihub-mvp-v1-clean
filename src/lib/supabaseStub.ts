@@ -9,4 +9,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const fetchUserProfile = async (
+export const getCurrentSession = async () => {
+  const { data, error } = await supabase.auth.get
