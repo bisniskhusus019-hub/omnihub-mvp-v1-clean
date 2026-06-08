@@ -20,6 +20,8 @@ import {
   signOutUser,
   supabase,
 } from './lib/supabaseStub';
+import { ensureSellerProfile } from './lib/sellerProfile';
+import type { SellerProfile } from './lib/sellerProfile';
 
 type Product = any;
 export type Transaction = any;
@@ -43,9 +45,7 @@ function DisabledModuleCard({ name }: { name: string }) {
       <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-4">
         <PowerOff size={24} className="text-slate-600" />
       </div>
-      <h2 className="text-lg font-bold text-slate-400 mb-2">
-        {name} is Disabled
-      </h2>
+      <h2 className="text-lg font-bold text-slate-400 mb-2">{name} is Disabled</h2>
       <p className="text-sm text-slate-600 text-center max-w-sm">
         This module is currently turned off. Enable it from the sidebar module toggles to access this feature.
       </p>
@@ -94,7 +94,6 @@ function normalizeProduct(row: any): Product {
     is_published: row.is_published,
     total_sales: row.total_sales || 0,
     view_count: row.view_count || 0,
-
     seller: {
       id: row.users?.id || row.seller?.id || row.seller_id,
       username: row.users?.username || row.seller?.username || 'seller',
@@ -106,14 +105,12 @@ function normalizeProduct(row: any): Product {
       shop_name: row.users?.shop_name || 'OmniHub Store',
       shop_slug: row.users?.shop_slug || 'omnihub-store',
     },
-
     category:
       row.product_type === 'service'
         ? 'Services'
         : row.product_type === 'physical'
         ? 'Physical Goods'
         : 'Digital Products',
-
     rating: 4.9,
     sales: row.total_sales || 0,
     file_size: row.file_size || 'Digital Delivery',
@@ -146,6 +143,7 @@ export default function App() {
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
+  const [currentSeller, setCurrentSeller] = useState<SellerProfile | null>(null);
 
   const [modules, setModules] = useState({
     marketplace: true,
@@ -161,12 +159,16 @@ export default function App() {
     const loadSession = async () => {
       const currentSession = await getCurrentSession();
       setSession(currentSession);
+      const seller = await ensureSellerProfile(currentSession);
+      setCurrentSeller(seller);
     };
 
     loadSession();
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       setSession(nextSession);
+      const seller = await ensureSellerProfile(nextSession);
+      setCurrentSeller(seller);
     });
 
     return () => {
@@ -192,8 +194,6 @@ export default function App() {
         if (supabaseTransactions && supabaseTransactions.length > 0) {
           setTransactions(supabaseTransactions.map(normalizeTransaction));
         }
-
-        console.log('[OmniHub] Supabase data loaded successfully');
       } catch (error) {
         console.error('[OmniHub] Failed to load Supabase data:', error);
         setSelectedProduct(mockProducts[0]);
@@ -221,12 +221,15 @@ export default function App() {
   const handleSignOut = async () => {
     await signOutUser();
     setSession(null);
+    setCurrentSeller(null);
     setActiveView('marketplace');
   };
 
   const handleAuthSuccess = async () => {
     const currentSession = await getCurrentSession();
     setSession(currentSession);
+    const seller = await ensureSellerProfile(currentSession);
+    setCurrentSeller(seller);
     setActiveView('dashboard');
   };
 
@@ -235,7 +238,6 @@ export default function App() {
       openAuth();
       return;
     }
-
     setActiveView(view);
   };
 
@@ -281,29 +283,26 @@ export default function App() {
             onSuccess={handleAuthSuccess}
           />
         );
-
       case 'profile':
         return <ProfileView products={products} onBuy={handleBuy} />;
-
       case 'dashboard':
         return isAuthenticated ? (
           <MerchantDashboard
             products={products}
             transactions={transactions}
+            currentSeller={currentSeller}
             onAddProduct={handleAddProduct}
             onBuy={handleBuy}
           />
         ) : (
           <SellerGate onLogin={openAuth} />
         );
-
       case 'marketplace':
         return modules.marketplace ? (
           <MarketplaceView products={products} onBuy={handleBuy} />
         ) : (
           <DisabledModuleCard name="Marketplace" />
         );
-
       case 'checkout':
         return (
           <CheckoutGateway
@@ -311,7 +310,6 @@ export default function App() {
             onComplete={handleCheckoutComplete}
           />
         );
-
       case 'fulfillment':
         return (
           <FulfillmentGateway
@@ -319,24 +317,20 @@ export default function App() {
             transaction={completedTransaction}
           />
         );
-
       case 'community':
         return modules.community ? <CommunityForum /> : <DisabledModuleCard name="Community" />;
-
       case 'invoice':
         return isAuthenticated ? (
           modules.invoice ? <InvoiceSheet /> : <DisabledModuleCard name="Invoice" />
         ) : (
           <SellerGate onLogin={openAuth} />
         );
-
       case 'kanban':
         return isAuthenticated ? (
           modules.kanban ? <KanbanBoard /> : <DisabledModuleCard name="Kanban" />
         ) : (
           <SellerGate onLogin={openAuth} />
         );
-
       default:
         return <MarketplaceView products={products} onBuy={handleBuy} />;
     }
