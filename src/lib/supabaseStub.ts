@@ -10,4 +10,3 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const getCurrentSession = async () => {
-  const { data
