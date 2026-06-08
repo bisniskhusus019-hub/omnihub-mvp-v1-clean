@@ -8,24 +8,23 @@ import {
   ArrowUpRight,
   Circle,
 } from 'lucide-react';
-import { mockStats, mockProducts } from '../data/mockData';
+import { mockStats } from '../data/mockData';
 import AddProductModal from './AddProductModal';
 import { createNewProduct } from '../lib/supabaseStub';
 import type { Transaction } from '../App';
+import type { SellerProfile } from '../lib/sellerProfile';
 
 type Product = any;
 
 interface MerchantDashboardProps {
   products: Product[];
   transactions: Transaction[];
+  currentSeller?: SellerProfile | null;
   onAddProduct: (product: Product) => void;
   onBuy: (product: Product) => void;
 }
 
-const statusConfig: Record<
-  string,
-  { label: string; color: string; dot: string }
-> = {
+const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
   completed: {
     label: 'Completed',
     color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
@@ -109,20 +108,20 @@ function getTransactionDate(txn: any) {
 export default function MerchantDashboard({
   products,
   transactions,
+  currentSeller,
   onAddProduct,
 }: MerchantDashboardProps) {
   const [showModal, setShowModal] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
 
-  const sellerId = useMemo(() => {
-    return (
-      products.find((p) => p.seller_id)?.seller_id ||
-      products.find((p) => p.seller?.id)?.seller?.id ||
-      null
-    );
-  }, [products]);
+  const sellerId = currentSeller?.id || null;
 
-  const paidTransactions = transactions.filter((txn: any) => {
+  const sellerTransactions = useMemo(() => {
+    if (!sellerId) return transactions;
+    return transactions.filter((txn: any) => !txn.seller_id || txn.seller_id === sellerId);
+  }, [sellerId, transactions]);
+
+  const paidTransactions = sellerTransactions.filter((txn: any) => {
     const status = getTransactionStatus(txn);
     return status === 'paid' || status === 'completed' || status === 'fulfilled';
   });
@@ -151,9 +150,7 @@ export default function MerchantDashboard({
     },
     {
       label: 'Total Sales',
-      value: paidTransactions.length > 0
-        ? paidTransactions.length.toString()
-        : mockStats.totalSales.toString(),
+      value: paidTransactions.length > 0 ? paidTransactions.length.toString() : mockStats.totalSales.toString(),
       sub: 'all time',
       icon: ShoppingBag,
       change: '+12.1%',
@@ -183,18 +180,17 @@ export default function MerchantDashboard({
     },
   ];
 
-  const myProducts = products.filter((product) => {
-    if (sellerId && product.seller_id) return product.seller_id === sellerId;
-    if (product.seller?.id) return product.seller.id === 'user_001';
-    return true;
-  });
+  const myProducts = useMemo(() => {
+    if (!sellerId) return [];
+    return products.filter((product) => product.seller_id === sellerId || product.seller?.id === sellerId);
+  }, [sellerId, products]);
 
   const handleSaveProduct = async (modalProduct: Product) => {
     setSavingProduct(true);
 
     try {
-      if (!sellerId) {
-        alert('Seller ID not found. Make sure at least one product from this seller exists in Supabase.');
+      if (!currentSeller?.id) {
+        alert('Seller profile is still loading. Please wait a moment, then try again.');
         setSavingProduct(false);
         return;
       }
@@ -205,7 +201,7 @@ export default function MerchantDashboard({
         (modalProduct.category === 'Services' ? 'service' : 'digital');
 
       const payload = {
-        seller_id: sellerId,
+        seller_id: currentSeller.id,
         title,
         slug: modalProduct.slug || `${slugify(title)}-${Date.now()}`,
         description: modalProduct.description || '',
@@ -242,12 +238,15 @@ export default function MerchantDashboard({
             : 'Digital Products',
         sales: 0,
         rating: 4.9,
-        seller: modalProduct.seller || {
-          id: sellerId,
-          username: 'rangga.ai',
-          display_name: 'Rangga Adhitya',
+        seller: {
+          id: currentSeller.id,
+          username: currentSeller.username,
+          display_name: currentSeller.display_name,
           avatar_url:
+            currentSeller.avatar_url ||
             'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300',
+          shop_name: currentSeller.shop_name || `${currentSeller.display_name}'s Store`,
+          shop_slug: currentSeller.shop_slug || `${currentSeller.username}-store`,
         },
       };
 
@@ -266,17 +265,21 @@ export default function MerchantDashboard({
       <div className="p-6 max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">
-              Merchant Dashboard
-            </h1>
+            <h1 className="text-2xl font-bold text-white">Merchant Dashboard</h1>
             <p className="text-sm text-slate-400 mt-0.5">
-              Welcome back, Rangga. Here's your overview.
+              Welcome back, {currentSeller?.display_name || 'Seller'}. Here's your seller overview.
             </p>
+            {!currentSeller && (
+              <p className="text-xs text-amber-300 mt-2">
+                Seller profile is being prepared. Product creation unlocks after profile sync.
+              </p>
+            )}
           </div>
 
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30"
+            disabled={!currentSeller}
+            className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30"
           >
             <Plus size={15} />
             Add New Product
@@ -286,36 +289,18 @@ export default function MerchantDashboard({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat) => {
             const Icon = stat.icon;
-
             return (
-              <div
-                key={stat.label}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors"
-              >
+              <div key={stat.label} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors">
                 <div className="flex items-start justify-between mb-4">
-                  <div
-                    className={`w-9 h-9 rounded-xl ${stat.bg} flex items-center justify-center`}
-                  >
+                  <div className={`w-9 h-9 rounded-xl ${stat.bg} flex items-center justify-center`}>
                     <Icon size={16} className={stat.color} />
                   </div>
-
-                  <span
-                    className={`text-xs font-semibold flex items-center gap-0.5 ${
-                      stat.positive ? 'text-emerald-400' : 'text-rose-400'
-                    }`}
-                  >
-                    <ArrowUpRight
-                      size={11}
-                      className={stat.positive ? '' : 'rotate-90'}
-                    />
+                  <span className={`text-xs font-semibold flex items-center gap-0.5 ${stat.positive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <ArrowUpRight size={11} className={stat.positive ? '' : 'rotate-90'} />
                     {stat.change}
                   </span>
                 </div>
-
-                <div className="text-2xl font-bold text-white mb-0.5">
-                  {stat.value}
-                </div>
-
+                <div className="text-2xl font-bold text-white mb-0.5">{stat.value}</div>
                 <div className="text-xs text-slate-500 flex items-center justify-between">
                   <span>{stat.label}</span>
                   <span className="text-slate-600">{stat.sub}</span>
@@ -328,46 +313,28 @@ export default function MerchantDashboard({
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
             <h2 className="font-semibold text-white">Recent Transactions</h2>
-            <span className="text-xs text-slate-500">
-              {transactions.length} total
-            </span>
+            <span className="text-xs text-slate-500">{sellerTransactions.length} total</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">
-                    Buyer
-                  </th>
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">
-                    Product
-                  </th>
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">
-                    Amount
-                  </th>
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">
-                    Status
-                  </th>
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3 hidden md:table-cell">
-                    Date
-                  </th>
+                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Buyer</th>
+                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3 hidden sm:table-cell">Product</th>
+                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Amount</th>
+                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Status</th>
+                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3 hidden md:table-cell">Date</th>
                 </tr>
               </thead>
-
               <tbody>
-                {transactions.map((txn: any, index) => {
+                {sellerTransactions.map((txn: any, index) => {
                   const status = getTransactionStatus(txn);
                   const config = statusConfig[status] || statusConfig.pending;
                   const buyerName = getBuyerName(txn);
 
                   return (
-                    <tr
-                      key={txn.id}
-                      className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors ${
-                        index === transactions.length - 1 ? 'border-0' : ''
-                      }`}
-                    >
+                    <tr key={txn.id} className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors ${index === sellerTransactions.length - 1 ? 'border-0' : ''}`}>
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-300 flex-shrink-0">
@@ -377,19 +344,12 @@ export default function MerchantDashboard({
                               .join('')
                               .slice(0, 2)}
                           </div>
-
-                          <span className="text-sm text-slate-200 font-medium">
-                            {buyerName}
-                          </span>
+                          <span className="text-sm text-slate-200 font-medium">{buyerName}</span>
                         </div>
                       </td>
-
                       <td className="px-6 py-3.5 hidden sm:table-cell">
-                        <span className="text-sm text-slate-400 max-w-[180px] truncate block">
-                          {getProductTitle(txn)}
-                        </span>
+                        <span className="text-sm text-slate-400 max-w-[180px] truncate block">{getProductTitle(txn)}</span>
                       </td>
-
                       <td className="px-6 py-3.5">
                         <span className="text-sm font-semibold text-white">
                           {(txn.currency || 'IDR') === 'IDR'
@@ -397,37 +357,22 @@ export default function MerchantDashboard({
                             : `$${Number(txn.amountUSD || txn.amount || 0).toFixed(2)}`}
                         </span>
                       </td>
-
                       <td className="px-6 py-3.5">
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${config.color}`}
-                        >
-                          <Circle
-                            size={5}
-                            className={`fill-current ${config.dot.replace(
-                              'bg-',
-                              'text-'
-                            )}`}
-                          />
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${config.color}`}>
+                          <Circle size={5} className={`fill-current ${config.dot.replace('bg-', 'text-')}`} />
                           {config.label}
                         </span>
                       </td>
-
                       <td className="px-6 py-3.5 hidden md:table-cell">
-                        <span className="text-xs text-slate-500">
-                          {getTransactionDate(txn)}
-                        </span>
+                        <span className="text-xs text-slate-500">{getTransactionDate(txn)}</span>
                       </td>
                     </tr>
                   );
                 })}
 
-                {transactions.length === 0 && (
+                {sellerTransactions.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-10 text-center text-sm text-slate-500"
-                    >
+                    <td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-500">
                       No transactions yet.
                     </td>
                   </tr>
@@ -440,18 +385,16 @@ export default function MerchantDashboard({
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">Your Products</h2>
-            <span className="text-xs text-slate-500">
-              {myProducts.length} products
-            </span>
+            <span className="text-xs text-slate-500">{myProducts.length} products</span>
           </div>
 
           {myProducts.length === 0 ? (
             <div className="text-center py-12 bg-slate-900 border border-slate-800 border-dashed rounded-2xl">
-              <p className="text-sm text-slate-500">No products yet.</p>
-
+              <p className="text-sm text-slate-500">No products yet for this seller account.</p>
               <button
                 onClick={() => setShowModal(true)}
-                className="mt-2 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                disabled={!currentSeller}
+                className="mt-2 text-xs text-cyan-400 hover:text-cyan-300 disabled:text-slate-600 disabled:cursor-not-allowed transition-colors"
               >
                 + Add your first product
               </button>
@@ -459,39 +402,23 @@ export default function MerchantDashboard({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {myProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 transition-all group"
-                >
+                <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 transition-all group">
                   <div className="relative h-36 overflow-hidden">
-                    <img
-                      src={getProductImage(product)}
-                      alt={product.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-
+                    <img src={getProductImage(product)} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 to-transparent" />
-
                     <span className="absolute top-2 left-2 text-[10px] bg-slate-900/80 text-cyan-400 px-2 py-0.5 rounded-full border border-cyan-500/20 font-medium">
                       {getProductCategory(product)}
                     </span>
                   </div>
-
                   <div className="p-4">
-                    <h3 className="text-sm font-semibold text-white mb-1 line-clamp-1">
-                      {product.title}
-                    </h3>
-
+                    <h3 className="text-sm font-semibold text-white mb-1 line-clamp-1">{product.title}</h3>
                     <div className="flex items-center justify-between">
                       <span className="text-base font-bold text-cyan-400">
                         {(product.currency || 'IDR') === 'IDR'
                           ? `Rp ${Number(product.price || 0).toLocaleString('id-ID')}`
                           : `$${Number(product.price || 0).toFixed(2)}`}
                       </span>
-
-                      <span className="text-xs text-slate-500">
-                        {product.sales || product.total_sales || 0} sold
-                      </span>
+                      <span className="text-xs text-slate-500">{product.sales || product.total_sales || 0} sold</span>
                     </div>
                   </div>
                 </div>
