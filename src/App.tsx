@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import AppShell from './components/AppShell';
 import ProfileView from './components/ProfileView';
 import MerchantDashboard from './components/MerchantDashboard';
@@ -9,9 +10,16 @@ import InvoiceSheet from './components/InvoiceSheet';
 import CommunityForum from './components/CommunityForum';
 import KanbanBoard from './components/KanbanBoard';
 import AISupportWidget from './components/AISupportWidget';
+import AuthPage from './components/AuthPage';
 import { mockProducts, mockTransactions } from './data/mockData';
-import { PowerOff } from 'lucide-react';
-import { fetchProducts, fetchTransactions } from './lib/supabaseStub';
+import { Lock, PowerOff } from 'lucide-react';
+import {
+  fetchProducts,
+  fetchTransactions,
+  getCurrentSession,
+  signOutUser,
+  supabase,
+} from './lib/supabaseStub';
 
 type Product = any;
 export type Transaction = any;
@@ -24,7 +32,10 @@ type View =
   | 'community'
   | 'fulfillment'
   | 'invoice'
-  | 'kanban';
+  | 'kanban'
+  | 'auth';
+
+const protectedViews: View[] = ['dashboard', 'invoice', 'kanban'];
 
 function DisabledModuleCard({ name }: { name: string }) {
   return (
@@ -38,6 +49,29 @@ function DisabledModuleCard({ name }: { name: string }) {
       <p className="text-sm text-slate-600 text-center max-w-sm">
         This module is currently turned off. Enable it from the sidebar module toggles to access this feature.
       </p>
+    </div>
+  );
+}
+
+function SellerGate({ onLogin }: { onLogin: () => void }) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center p-6">
+      <div className="max-w-md w-full rounded-3xl border border-slate-800 bg-slate-900/80 p-6 text-center shadow-2xl shadow-cyan-950/20">
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-4">
+          <Lock size={24} className="text-cyan-300" />
+        </div>
+        <h2 className="text-xl font-bold text-white">Seller workspace locked</h2>
+        <p className="mt-2 text-sm text-slate-400 leading-6">
+          Marketplace, community, and checkout stay public for buyers. Login is required only for seller operations.
+        </p>
+        <button
+          type="button"
+          onClick={onLogin}
+          className="mt-5 inline-flex items-center justify-center bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20"
+        >
+          Login / Register Seller
+        </button>
+      </div>
     </div>
   );
 }
@@ -62,6 +96,7 @@ function normalizeProduct(row: any): Product {
     view_count: row.view_count || 0,
 
     seller: {
+      id: row.users?.id || row.seller?.id || row.seller_id,
       username: row.users?.username || row.seller?.username || 'seller',
       display_name: row.users?.display_name || row.seller?.display_name || 'OmniHub Seller',
       avatar_url:
@@ -103,12 +138,14 @@ function normalizeTransaction(row: any): Transaction {
 }
 
 export default function App() {
-  const [activeView, setActiveView] = useState<View>('profile');
+  const [activeView, setActiveView] = useState<View>('marketplace');
+  const [previousPublicView, setPreviousPublicView] = useState<View>('marketplace');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
 
   const [modules, setModules] = useState({
     marketplace: true,
@@ -117,6 +154,25 @@ export default function App() {
     invoice: true,
     aiSupport: true,
   });
+
+  const isAuthenticated = Boolean(session);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      const currentSession = await getCurrentSession();
+      setSession(currentSession);
+    };
+
+    loadSession();
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const loadSupabaseData = async () => {
@@ -148,6 +204,40 @@ export default function App() {
 
     loadSupabaseData();
   }, []);
+
+  useEffect(() => {
+    if (!protectedViews.includes(activeView)) {
+      setPreviousPublicView(activeView);
+    }
+  }, [activeView]);
+
+  const openAuth = () => {
+    if (!protectedViews.includes(activeView)) {
+      setPreviousPublicView(activeView);
+    }
+    setActiveView('auth');
+  };
+
+  const handleSignOut = async () => {
+    await signOutUser();
+    setSession(null);
+    setActiveView('marketplace');
+  };
+
+  const handleAuthSuccess = async () => {
+    const currentSession = await getCurrentSession();
+    setSession(currentSession);
+    setActiveView('dashboard');
+  };
+
+  const handleSetActiveView = (view: View) => {
+    if (protectedViews.includes(view) && !isAuthenticated) {
+      openAuth();
+      return;
+    }
+
+    setActiveView(view);
+  };
 
   const handleToggleModule = (key: string) => {
     setModules((prev) => ({
@@ -184,17 +274,27 @@ export default function App() {
 
   const renderView = () => {
     switch (activeView) {
+      case 'auth':
+        return (
+          <AuthPage
+            onBack={() => setActiveView(previousPublicView || 'marketplace')}
+            onSuccess={handleAuthSuccess}
+          />
+        );
+
       case 'profile':
         return <ProfileView products={products} onBuy={handleBuy} />;
 
       case 'dashboard':
-        return (
+        return isAuthenticated ? (
           <MerchantDashboard
             products={products}
             transactions={transactions}
             onAddProduct={handleAddProduct}
             onBuy={handleBuy}
           />
+        ) : (
+          <SellerGate onLogin={openAuth} />
         );
 
       case 'marketplace':
@@ -221,28 +321,24 @@ export default function App() {
         );
 
       case 'community':
-        return modules.community ? (
-          <CommunityForum />
-        ) : (
-          <DisabledModuleCard name="Community" />
-        );
+        return modules.community ? <CommunityForum /> : <DisabledModuleCard name="Community" />;
 
       case 'invoice':
-        return modules.invoice ? (
-          <InvoiceSheet />
+        return isAuthenticated ? (
+          modules.invoice ? <InvoiceSheet /> : <DisabledModuleCard name="Invoice" />
         ) : (
-          <DisabledModuleCard name="Invoice" />
+          <SellerGate onLogin={openAuth} />
         );
 
       case 'kanban':
-        return modules.kanban ? (
-          <KanbanBoard />
+        return isAuthenticated ? (
+          modules.kanban ? <KanbanBoard /> : <DisabledModuleCard name="Kanban" />
         ) : (
-          <DisabledModuleCard name="Kanban" />
+          <SellerGate onLogin={openAuth} />
         );
 
       default:
-        return <ProfileView products={products} onBuy={handleBuy} />;
+        return <MarketplaceView products={products} onBuy={handleBuy} />;
     }
   };
 
@@ -250,9 +346,12 @@ export default function App() {
     <>
       <AppShell
         activeView={activeView}
-        setActiveView={(v) => setActiveView(v as View)}
+        setActiveView={(view) => handleSetActiveView(view as View)}
         modules={modules}
         toggleModule={handleToggleModule}
+        isAuthenticated={isAuthenticated}
+        onSignInClick={openAuth}
+        onSignOut={handleSignOut}
       >
         {isLoadingSupabase ? (
           <div className="min-h-[60vh] flex items-center justify-center">
