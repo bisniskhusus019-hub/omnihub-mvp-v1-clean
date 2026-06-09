@@ -206,13 +206,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!protectedViews.includes(activeView)) {
+    if (activeView !== 'auth' && !protectedViews.includes(activeView)) {
       setPreviousPublicView(activeView);
     }
   }, [activeView]);
 
   const openAuth = () => {
-    if (!protectedViews.includes(activeView)) {
+    if (activeView !== 'auth' && !protectedViews.includes(activeView)) {
       setPreviousPublicView(activeView);
     }
     setActiveView('auth');
