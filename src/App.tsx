@@ -10,6 +10,7 @@ import InvoiceSheet from './components/InvoiceSheet';
 import CommunityForum from './components/CommunityForum';
 import KanbanBoard from './components/KanbanBoard';
 import AISupportWidget from './components/AISupportWidget';
+import AIHub from './components/AIHub';
 import AuthPage from './components/AuthPage';
 import { mockProducts, mockTransactions } from './data/mockData';
 import { Lock, PowerOff } from 'lucide-react';
@@ -32,6 +33,7 @@ type View =
   | 'marketplace'
   | 'checkout'
   | 'community'
+  | 'ai-hub'
   | 'fulfillment'
   | 'invoice'
   | 'kanban'
@@ -151,6 +153,7 @@ export default function App() {
     kanban: true,
     invoice: true,
     aiSupport: true,
+    aiHub: true,
   });
 
   const isAuthenticated = Boolean(session);
@@ -319,6 +322,8 @@ export default function App() {
         );
       case 'community':
         return modules.community ? <CommunityForum /> : <DisabledModuleCard name="Community" />;
+      case 'ai-hub':
+        return modules.aiHub ? <AIHub /> : <DisabledModuleCard name="AI Hub" />;
       case 'invoice':
         return isAuthenticated ? (
           modules.invoice ? <InvoiceSheet /> : <DisabledModuleCard name="Invoice" />
