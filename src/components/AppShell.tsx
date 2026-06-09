@@ -21,6 +21,7 @@ import {
   Bot,
   Lock,
   LogIn,
+  Sparkles,
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -35,18 +36,20 @@ interface AppShellProps {
 }
 
 const navItems = [
+  { key: 'marketplace', label: 'Marketplace', icon: ShoppingBag, access: 'public' },
+  { key: 'ai-hub', label: 'AI Hub', icon: Sparkles, access: 'public' },
+  { key: 'community', label: 'Community', icon: MessageSquare, access: 'public' },
+  { key: 'checkout', label: 'Checkout', icon: ShoppingCart, access: 'public' },
+  { key: 'fulfillment', label: 'Fulfillment', icon: Download, access: 'public' },
   { key: 'profile', label: 'Profile', icon: User, access: 'public' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, access: 'seller' },
-  { key: 'marketplace', label: 'Marketplace', icon: ShoppingBag, access: 'public' },
-  { key: 'checkout', label: 'Checkout', icon: ShoppingCart, access: 'public' },
-  { key: 'community', label: 'Community', icon: MessageSquare, access: 'public' },
-  { key: 'fulfillment', label: 'Fulfillment', icon: Download, access: 'public' },
   { key: 'invoice', label: 'Invoice', icon: FileText, access: 'seller' },
   { key: 'kanban', label: 'Kanban', icon: Kanban, access: 'seller' },
 ];
 
 const moduleKeys = [
   { key: 'marketplace', label: 'Marketplace' },
+  { key: 'aiHub', label: 'AI Hub' },
   { key: 'community', label: 'Community' },
   { key: 'kanban', label: 'Kanban' },
   { key: 'invoice', label: 'Invoice' },
@@ -78,6 +81,11 @@ export default function AppShell({
     setSidebarOpen(false);
   };
 
+  const isDisabled = (key: string) => {
+    if (key === 'ai-hub') return modules.aiHub === false;
+    return modules[key] === false;
+  };
+
   return (
     <div className="h-screen bg-slate-950 text-slate-100 flex overflow-hidden">
       {sidebarOpen && (
@@ -101,7 +109,7 @@ export default function AppShell({
           </div>
           <div>
             <div className="font-bold text-white text-sm tracking-wide">OmniHub</div>
-            <div className="text-[10px] text-cyan-400 font-medium tracking-widest uppercase">Public MVP</div>
+            <div className="text-[10px] text-cyan-400 font-medium tracking-widest uppercase">AI Marketplace MVP</div>
           </div>
           <button
             className="ml-auto lg:hidden text-slate-400 hover:text-white"
@@ -119,7 +127,7 @@ export default function AppShell({
           </div>
 
           {navItems.map(({ key, label, icon: Icon, access }) => {
-            const isModuleDisabled = modules[key] === false;
+            const isModuleDisabled = isDisabled(key);
             const isActive = activeView === key;
             const isLocked = access === 'seller' && !isAuthenticated;
 
@@ -210,7 +218,7 @@ export default function AppShell({
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
             <Bot size={14} className="text-cyan-400" />
-            <span>Marketplace + Community are public. Seller dashboard requires login.</span>
+            <span>Marketplace + AI Hub + Community are public. Seller dashboard requires login.</span>
           </div>
 
           <div className="flex-1" />
