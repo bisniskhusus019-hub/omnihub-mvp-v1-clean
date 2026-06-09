@@ -19,6 +19,7 @@ OmniHub is a public-first solopreneur marketplace and seller workspace built wit
 - Kanban is protected.
 - Seller Login/Register uses Supabase Auth.
 - Seller profile is automatically created or recovered from the `users` table.
+- Seller products are saved with the logged-in seller profile id.
 
 ## Environment Variables
 
@@ -28,6 +29,16 @@ Create these variables in your hosting platform or local `.env` file:
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-public-key
 ```
+
+## Supabase SQL Setup
+
+Run the table SQL first, then run:
+
+```text
+supabase/seller-auth-policies.sql
+```
+
+This policy file keeps the buyer side public for MVP testing and protects seller product writes with Supabase Auth.
 
 ## Local Test Commands
 
@@ -66,7 +77,7 @@ npm run dev
 
 ## Public MVP RLS Notes
 
-For this early MVP, public insert/select policies are needed for checkout and community testing. Later production versions should restrict seller-only writes more tightly.
+For this early MVP, public insert/select policies are needed for checkout and community testing. Later production versions should restrict buyer reads/writes and seller data access more tightly.
 
 ## Deployment Notes
 
