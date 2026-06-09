@@ -225,6 +225,96 @@ export const updateCommunityPostUpvotes = async (postId: string, upvotes: number
   return data;
 };
 
+export const fetchAffiliatePrograms = async () => {
+  const { data, error } = await supabase
+    .from('affiliate_programs')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[supabase] fetchAffiliatePrograms error:', error);
+    return [];
+  }
+
+  return data || [];
+};
+
+export const fetchAffiliates = async () => {
+  const { data, error } = await supabase
+    .from('affiliates')
+    .select('*')
+    .order('total_earnings', { ascending: false });
+
+  if (error) {
+    console.error('[supabase] fetchAffiliates error:', error);
+    return [];
+  }
+
+  return data || [];
+};
+
+export const fetchAffiliateApplications = async () => {
+  const { data, error } = await supabase
+    .from('affiliate_applications')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[supabase] fetchAffiliateApplications error:', error);
+    return [];
+  }
+
+  return data || [];
+};
+
+export const submitAffiliateApplication = async (applicationData: Record<string, any>) => {
+  const { data, error } = await supabase
+    .from('affiliate_applications')
+    .insert({
+      full_name: applicationData.full_name,
+      email: applicationData.email,
+      audience_type: applicationData.audience_type || '',
+      promotion_channel: applicationData.promotion_channel || '',
+      reason: applicationData.reason || '',
+      status: 'pending',
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('[supabase] submitAffiliateApplication error:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+export const createAffiliateRecord = async (affiliateData: Record<string, any>) => {
+  const referralCode = affiliateData.referral_code || `OMNI${Date.now().toString().slice(-6)}`;
+
+  const { data, error } = await supabase
+    .from('affiliates')
+    .insert({
+      user_id: affiliateData.user_id || null,
+      display_name: affiliateData.display_name,
+      email: affiliateData.email,
+      status: affiliateData.status || 'approved',
+      referral_code: referralCode,
+      payout_method: affiliateData.payout_method || 'manual',
+      payout_details: affiliateData.payout_details || '',
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('[supabase] createAffiliateRecord error:', error);
+    throw error;
+  }
+
+  return data;
+};
+
 export const getCurrentSession = async () => {
   const { data, error } = await supabase.auth.getSession();
 
@@ -271,20 +361,21 @@ export const signUpWithEmail = async ({
   const authUser = data.user;
 
   if (authUser) {
-    const cleanUsername = username || email.split('@')[0].toLowerCase().replace(/[^a-z0-9.]+/g, '');
+    const baseUsername = username || email.split('@')[0].toLowerCase().replace(/[^a-z0-9.]+/g, '');
+    const cleanUsername = `${baseUsername}-${authUser.id.slice(0, 6)}`.toLowerCase();
 
     const { error: profileError } = await supabase.from('users').insert({
       auth_user_id: authUser.id,
       username: cleanUsername,
       email,
-      display_name: displayName || cleanUsername,
+      display_name: displayName || baseUsername,
       headline: 'OmniHub Solopreneur',
       bio: 'Building products, services, and digital business with OmniHub.',
       avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300',
       cover_url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1600',
       website_url: '',
       social_links: [],
-      shop_name: `${displayName || cleanUsername}'s Store`,
+      shop_name: `${displayName || baseUsername}'s Store`,
       shop_slug: `${cleanUsername}-store`,
       shop_description: 'My OmniHub digital shop.',
       role: 'seller',
