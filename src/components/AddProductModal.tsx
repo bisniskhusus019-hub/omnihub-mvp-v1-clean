@@ -47,16 +47,18 @@ export default function AddProductModal({ onSave, onClose, saving = false }: Add
     thumbnailUrl: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [saved, setSaved] = useState(false);
+  const [localSaving, setLocalSaving] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  const isBusy = saving || localSaving;
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !saving) onClose();
+      if (event.key === 'Escape' && !isBusy) onClose();
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onClose, saving]);
+  }, [onClose, isBusy]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -82,7 +84,7 @@ export default function AddProductModal({ onSave, onClose, saving = false }: Add
 
   const handleSave = async () => {
     const errs = validate();
-    if (Object.keys(errs).length > 0 || saving) {
+    if (Object.keys(errs).length > 0 || isBusy) {
       setErrors(errs);
       return;
     }
@@ -119,12 +121,21 @@ export default function AddProductModal({ onSave, onClose, saving = false }: Add
       rating: 5.0,
     };
 
-    setSaved(true);
-    await onSave(newProduct);
+    try {
+      setLocalSaving(true);
+      await onSave(newProduct);
+    } catch (error) {
+      console.error('Add product save failed:', error);
+      setErrors((current) => ({
+        ...current,
+        form: 'Product could not be saved. Check Supabase policy or try again.',
+      }));
+    } finally {
+      setLocalSaving(false);
+    }
   };
 
   const previewImage = form.thumbnailUrl.trim() || fallbackImage;
-  const isBusy = saved || saving;
 
   return (
     <div
@@ -150,6 +161,12 @@ export default function AddProductModal({ onSave, onClose, saving = false }: Add
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {errors.form && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+              {errors.form}
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
               Product Type
