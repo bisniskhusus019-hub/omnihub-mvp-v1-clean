@@ -22,6 +22,7 @@ import {
   Lock,
   LogIn,
   Sparkles,
+  Handshake,
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -38,6 +39,7 @@ interface AppShellProps {
 const navItems = [
   { key: 'marketplace', label: 'Marketplace', icon: ShoppingBag, access: 'public' },
   { key: 'ai-hub', label: 'AI Hub', icon: Sparkles, access: 'public' },
+  { key: 'affiliates', label: 'Affiliates', icon: Handshake, access: 'public' },
   { key: 'community', label: 'Community', icon: MessageSquare, access: 'public' },
   { key: 'checkout', label: 'Checkout', icon: ShoppingCart, access: 'public' },
   { key: 'fulfillment', label: 'Fulfillment', icon: Download, access: 'public' },
@@ -50,6 +52,7 @@ const navItems = [
 const moduleKeys = [
   { key: 'marketplace', label: 'Marketplace' },
   { key: 'aiHub', label: 'AI Hub' },
+  { key: 'affiliates', label: 'Affiliates' },
   { key: 'community', label: 'Community' },
   { key: 'kanban', label: 'Kanban' },
   { key: 'invoice', label: 'Invoice' },
@@ -218,7 +221,7 @@ export default function AppShell({
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
             <Bot size={14} className="text-cyan-400" />
-            <span>Marketplace + AI Hub + Community are public. Seller dashboard requires login.</span>
+            <span>Marketplace + AI Hub + Affiliates + Community are public. Seller dashboard requires login.</span>
           </div>
 
           <div className="flex-1" />
