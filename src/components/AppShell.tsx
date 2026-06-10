@@ -23,6 +23,7 @@ import {
   LogIn,
   Sparkles,
   Handshake,
+  Database,
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -45,6 +46,7 @@ const navItems = [
   { key: 'fulfillment', label: 'Fulfillment', icon: Download, access: 'public' },
   { key: 'profile', label: 'Profile', icon: User, access: 'public' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, access: 'seller' },
+  { key: 'storage', label: 'Storage Vault', icon: Database, access: 'seller' },
   { key: 'invoice', label: 'Invoice', icon: FileText, access: 'seller' },
   { key: 'kanban', label: 'Kanban', icon: Kanban, access: 'seller' },
 ];
@@ -54,6 +56,7 @@ const moduleKeys = [
   { key: 'aiHub', label: 'AI Hub' },
   { key: 'affiliates', label: 'Affiliates' },
   { key: 'community', label: 'Community' },
+  { key: 'storage', label: 'Storage Vault' },
   { key: 'kanban', label: 'Kanban' },
   { key: 'invoice', label: 'Invoice' },
   { key: 'aiSupport', label: 'AI Support' },
