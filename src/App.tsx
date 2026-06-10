@@ -12,6 +12,7 @@ import KanbanBoard from './components/KanbanBoard';
 import AISupportWidget from './components/AISupportWidget';
 import AIHub from './components/AIHub';
 import AffiliateCenter from './components/AffiliateCenter';
+import StorageVault from './components/StorageVault';
 import AuthPage from './components/AuthPage';
 import { mockProducts, mockTransactions } from './data/mockData';
 import { Lock, PowerOff } from 'lucide-react';
@@ -36,12 +37,13 @@ type View =
   | 'community'
   | 'ai-hub'
   | 'affiliates'
+  | 'storage'
   | 'fulfillment'
   | 'invoice'
   | 'kanban'
   | 'auth';
 
-const protectedViews: View[] = ['dashboard', 'invoice', 'kanban'];
+const protectedViews: View[] = ['dashboard', 'invoice', 'kanban', 'storage'];
 
 function DisabledModuleCard({ name }: { name: string }) {
   return (
@@ -157,6 +159,7 @@ export default function App() {
     aiSupport: true,
     aiHub: true,
     affiliates: true,
+    storage: true,
   });
 
   const isAuthenticated = Boolean(session);
@@ -329,6 +332,12 @@ export default function App() {
         return modules.aiHub ? <AIHub /> : <DisabledModuleCard name="AI Hub" />;
       case 'affiliates':
         return modules.affiliates ? <AffiliateCenter /> : <DisabledModuleCard name="Affiliate Center" />;
+      case 'storage':
+        return isAuthenticated ? (
+          modules.storage ? <StorageVault /> : <DisabledModuleCard name="Storage Vault" />
+        ) : (
+          <SellerGate onLogin={openAuth} />
+        );
       case 'invoice':
         return isAuthenticated ? (
           modules.invoice ? <InvoiceSheet /> : <DisabledModuleCard name="Invoice" />
