@@ -173,6 +173,73 @@ export const generateDownloadToken = async (productId: string, transactionHash: 
   return token;
 };
 
+export const listStorageBuckets = async () => {
+  const { data, error } = await supabase.storage.listBuckets();
+
+  if (error) {
+    console.error('[supabase] listStorageBuckets error:', error);
+    return [];
+  }
+
+  return data || [];
+};
+
+function sanitizeStorageFileName(fileName: string) {
+  const [rawName, ...rest] = fileName.split('.');
+  const extension = rest.length ? `.${rest.pop()}` : '';
+  const safeName = (rawName || 'file')
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+
+  return `${safeName || 'file'}-${Date.now()}${extension.toLowerCase()}`;
+}
+
+export const uploadStorageFile = async ({
+  bucket,
+  file,
+  folder = 'public',
+}: {
+  bucket: string;
+  file: File;
+  folder?: string;
+}) => {
+  const safeFolder = folder.replace(/[^a-zA-Z0-9-_/.]+/g, '-').replace(/^\/+|\/+$/g, '') || 'public';
+  const filePath = `${safeFolder}/${sanitizeStorageFileName(file.name)}`;
+
+  const { data, error } = await supabase.storage.from(bucket).upload(filePath, file, {
+    cacheControl: '3600',
+    contentType: file.type || undefined,
+    upsert: false,
+  });
+
+  if (error) {
+    console.error('[supabase] uploadStorageFile error:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+export const getStoragePublicUrl = (bucket: string, path: string) => {
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
+};
+
+export const createStorageSignedUrl = async (bucket: string, path: string, expiresInSeconds = 3600) => {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresInSeconds, {
+    download: true,
+  });
+
+  if (error) {
+    console.error('[supabase] createStorageSignedUrl error:', error);
+    throw error;
+  }
+
+  return data.signedUrl;
+};
+
 export const fetchCommunityPosts = async () => {
   const { data, error } = await supabase
     .from('community_posts')
