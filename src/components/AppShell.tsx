@@ -25,6 +25,7 @@ import {
   Handshake,
   Database,
   BriefcaseBusiness,
+  Rocket,
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -48,6 +49,7 @@ const navItems = [
   { key: 'profile', label: 'Profile', icon: User, access: 'public' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, access: 'seller' },
   { key: 'business-os', label: 'Business OS', icon: BriefcaseBusiness, access: 'seller' },
+  { key: 'growth-suite', label: 'Growth Suite', icon: Rocket, access: 'seller' },
   { key: 'storage', label: 'Storage Vault', icon: Database, access: 'seller' },
   { key: 'invoice', label: 'Invoice', icon: FileText, access: 'seller' },
   { key: 'kanban', label: 'Kanban', icon: Kanban, access: 'seller' },
@@ -56,6 +58,7 @@ const navItems = [
 const moduleKeys = [
   { key: 'marketplace', label: 'Marketplace' },
   { key: 'businessOS', label: 'Business OS' },
+  { key: 'growthSuite', label: 'Growth Suite' },
   { key: 'aiHub', label: 'AI Hub' },
   { key: 'affiliates', label: 'Affiliates' },
   { key: 'community', label: 'Community' },
@@ -93,6 +96,7 @@ export default function AppShell({
   const isDisabled = (key: string) => {
     if (key === 'ai-hub') return modules.aiHub === false;
     if (key === 'business-os') return modules.businessOS === false;
+    if (key === 'growth-suite') return modules.growthSuite === false;
     return modules[key] === false;
   };
 
@@ -228,7 +232,7 @@ export default function AppShell({
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
             <Bot size={14} className="text-cyan-400" />
-            <span>Marketplace + AI Hub + Affiliates + Community are public. Seller dashboard and Business OS require login.</span>
+            <span>Marketplace + AI Hub + Affiliates + Community are public. Seller dashboard and business tools require login.</span>
           </div>
 
           <div className="flex-1" />
