@@ -26,6 +26,7 @@ import {
   Database,
   BriefcaseBusiness,
   Rocket,
+  ServerCog,
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -48,6 +49,7 @@ const navItems = [
   { key: 'fulfillment', label: 'Fulfillment', icon: Download, access: 'public' },
   { key: 'profile', label: 'Profile', icon: User, access: 'public' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, access: 'seller' },
+  { key: 'owner-panel', label: 'Owner Control', icon: ServerCog, access: 'seller' },
   { key: 'business-os', label: 'Business OS', icon: BriefcaseBusiness, access: 'seller' },
   { key: 'growth-suite', label: 'Growth Suite', icon: Rocket, access: 'seller' },
   { key: 'storage', label: 'Storage Vault', icon: Database, access: 'seller' },
@@ -57,6 +59,7 @@ const navItems = [
 
 const moduleKeys = [
   { key: 'marketplace', label: 'Marketplace' },
+  { key: 'ownerPanel', label: 'Owner Control' },
   { key: 'businessOS', label: 'Business OS' },
   { key: 'growthSuite', label: 'Growth Suite' },
   { key: 'aiHub', label: 'AI Hub' },
@@ -97,6 +100,7 @@ export default function AppShell({
     if (key === 'ai-hub') return modules.aiHub === false;
     if (key === 'business-os') return modules.businessOS === false;
     if (key === 'growth-suite') return modules.growthSuite === false;
+    if (key === 'owner-panel') return modules.ownerPanel === false;
     return modules[key] === false;
   };
 
