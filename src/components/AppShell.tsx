@@ -35,6 +35,7 @@ interface AppShellProps {
   modules: Record<string, boolean>;
   toggleModule: (key: string) => void;
   isAuthenticated?: boolean;
+  isPlatformOwner?: boolean;
   onSignInClick?: () => void;
   onSignOut?: () => void;
   children: React.ReactNode;
@@ -49,7 +50,7 @@ const navItems = [
   { key: 'fulfillment', label: 'Fulfillment', icon: Download, access: 'public' },
   { key: 'profile', label: 'Profile', icon: User, access: 'public' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, access: 'seller' },
-  { key: 'owner-panel', label: 'Owner Control', icon: ServerCog, access: 'seller' },
+  { key: 'owner-panel', label: 'Owner Control', icon: ServerCog, access: 'owner' },
   { key: 'business-os', label: 'Business OS', icon: BriefcaseBusiness, access: 'seller' },
   { key: 'growth-suite', label: 'Growth Suite', icon: Rocket, access: 'seller' },
   { key: 'storage', label: 'Storage Vault', icon: Database, access: 'seller' },
@@ -58,17 +59,17 @@ const navItems = [
 ];
 
 const moduleKeys = [
-  { key: 'marketplace', label: 'Marketplace' },
-  { key: 'ownerPanel', label: 'Owner Control' },
-  { key: 'businessOS', label: 'Business OS' },
-  { key: 'growthSuite', label: 'Growth Suite' },
-  { key: 'aiHub', label: 'AI Hub' },
-  { key: 'affiliates', label: 'Affiliates' },
-  { key: 'community', label: 'Community' },
-  { key: 'storage', label: 'Storage Vault' },
-  { key: 'kanban', label: 'Kanban' },
-  { key: 'invoice', label: 'Invoice' },
-  { key: 'aiSupport', label: 'AI Support' },
+  { key: 'marketplace', label: 'Marketplace', access: 'public' },
+  { key: 'ownerPanel', label: 'Owner Control', access: 'owner' },
+  { key: 'businessOS', label: 'Business OS', access: 'seller' },
+  { key: 'growthSuite', label: 'Growth Suite', access: 'seller' },
+  { key: 'aiHub', label: 'AI Hub', access: 'public' },
+  { key: 'affiliates', label: 'Affiliates', access: 'public' },
+  { key: 'community', label: 'Community', access: 'public' },
+  { key: 'storage', label: 'Storage Vault', access: 'seller' },
+  { key: 'kanban', label: 'Kanban', access: 'seller' },
+  { key: 'invoice', label: 'Invoice', access: 'seller' },
+  { key: 'aiSupport', label: 'AI Support', access: 'public' },
 ];
 
 export default function AppShell({
@@ -77,6 +78,7 @@ export default function AppShell({
   modules,
   toggleModule,
   isAuthenticated = false,
+  isPlatformOwner = false,
   onSignInClick,
   onSignOut,
   children,
@@ -86,8 +88,13 @@ export default function AppShell({
   const [sovereignMode, setSovereignMode] = useState(false);
 
   const handleNav = (key: string, access?: string) => {
-    if (access === 'seller' && !isAuthenticated) {
+    if ((access === 'seller' || access === 'owner') && !isAuthenticated) {
       onSignInClick?.();
+      setSidebarOpen(false);
+      return;
+    }
+
+    if (access === 'owner' && !isPlatformOwner) {
       setSidebarOpen(false);
       return;
     }
@@ -103,6 +110,9 @@ export default function AppShell({
     if (key === 'owner-panel') return modules.ownerPanel === false;
     return modules[key] === false;
   };
+
+  const visibleNavItems = navItems.filter((item) => item.access !== 'owner' || isPlatformOwner);
+  const visibleModuleKeys = moduleKeys.filter((item) => item.access !== 'owner' || isPlatformOwner);
 
   return (
     <div className="h-screen bg-slate-950 text-slate-100 flex overflow-hidden">
@@ -144,7 +154,7 @@ export default function AppShell({
             </p>
           </div>
 
-          {navItems.map(({ key, label, icon: Icon, access }) => {
+          {visibleNavItems.map(({ key, label, icon: Icon, access }) => {
             const isModuleDisabled = isDisabled(key);
             const isActive = activeView === key;
             const isLocked = access === 'seller' && !isAuthenticated;
@@ -184,7 +194,7 @@ export default function AppShell({
               Modules
             </p>
           </div>
-          {moduleKeys.map(({ key, label }) => (
+          {visibleModuleKeys.map(({ key, label }) => (
             <div key={key} className="flex items-center justify-between px-5 py-2">
               <span className="text-xs text-slate-400">{label}</span>
               <button
@@ -203,7 +213,11 @@ export default function AppShell({
               Access Mode
             </div>
             <div className="text-xs text-slate-300 leading-5">
-              {isAuthenticated ? 'Seller workspace unlocked.' : 'Public browsing enabled. Seller tools are locked.'}
+              {isPlatformOwner
+                ? 'Owner workspace unlocked.'
+                : isAuthenticated
+                ? 'Seller workspace unlocked.'
+                : 'Public browsing enabled. Seller tools are locked.'}
             </div>
           </div>
 
@@ -258,7 +272,7 @@ export default function AppShell({
                   className="w-7 h-7 rounded-full object-cover border border-slate-700"
                 />
                 <div className="hidden sm:block text-left">
-                  <div className="text-xs font-semibold text-white leading-none">Seller</div>
+                  <div className="text-xs font-semibold text-white leading-none">{isPlatformOwner ? 'Owner' : 'Seller'}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">workspace active</div>
                 </div>
                 <ChevronDown size={12} className="text-slate-500 hidden sm:block" />
