@@ -13,6 +13,7 @@ import AISupportWidget from './components/AISupportWidget';
 import AIHub from './components/AIHub';
 import AffiliateCenter from './components/AffiliateCenter';
 import StorageVault from './components/StorageVault';
+import BusinessOS from './components/BusinessOS';
 import AuthPage from './components/AuthPage';
 import { mockProducts, mockTransactions } from './data/mockData';
 import { Lock, PowerOff } from 'lucide-react';
@@ -32,6 +33,7 @@ export type Transaction = any;
 type View =
   | 'profile'
   | 'dashboard'
+  | 'business-os'
   | 'marketplace'
   | 'checkout'
   | 'community'
@@ -43,7 +45,7 @@ type View =
   | 'kanban'
   | 'auth';
 
-const protectedViews: View[] = ['dashboard', 'invoice', 'kanban', 'storage'];
+const protectedViews: View[] = ['dashboard', 'business-os', 'invoice', 'kanban', 'storage'];
 
 function DisabledModuleCard({ name }: { name: string }) {
   return (
@@ -153,6 +155,7 @@ export default function App() {
 
   const [modules, setModules] = useState({
     marketplace: true,
+    businessOS: true,
     community: true,
     kanban: true,
     invoice: true,
@@ -303,6 +306,12 @@ export default function App() {
             onAddProduct={handleAddProduct}
             onBuy={handleBuy}
           />
+        ) : (
+          <SellerGate onLogin={openAuth} />
+        );
+      case 'business-os':
+        return isAuthenticated ? (
+          modules.businessOS ? <BusinessOS /> : <DisabledModuleCard name="Business OS" />
         ) : (
           <SellerGate onLogin={openAuth} />
         );
