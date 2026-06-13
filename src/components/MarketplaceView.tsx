@@ -9,8 +9,21 @@ import {
   Package,
   Briefcase,
   Tag,
+  Globe2,
+  Coins,
 } from 'lucide-react';
 import { mockProducts } from '../data/mockData';
+import {
+  DEFAULT_CURRENCY,
+  DEFAULT_LANGUAGE,
+  convertMoney,
+  formatMoney,
+  loadGlobalPreference,
+  saveGlobalPreference,
+  supportedCurrencies,
+  supportedLanguages,
+  translate,
+} from '../lib/globalization';
 
 const categories = ['All', 'Digital Products', 'Services', 'Physical Goods'];
 
@@ -44,9 +57,8 @@ function getProductPrice(product: Product) {
   return Number(product.price || 0);
 }
 
-function getProductUsdPrice(product: Product) {
-  if (product.priceUSD) return Number(product.priceUSD);
-  return Math.max(1, Math.round(getProductPrice(product) / 15500));
+function getProductCurrency(product: Product) {
+  return product.currency || 'IDR';
 }
 
 function getSellerName(product: Product) {
@@ -74,6 +86,8 @@ function getSellerAvatar(product: Product) {
 export default function MarketplaceView({ products, onBuy }: MarketplaceViewProps) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [language, setLanguage] = useState(() => loadGlobalPreference('omnihub_language', DEFAULT_LANGUAGE));
+  const [currency, setCurrency] = useState(() => loadGlobalPreference('omnihub_currency', DEFAULT_CURRENCY));
 
   const filtered = products.filter((product) => {
     const category = getProductCategory(product);
@@ -87,13 +101,64 @@ export default function MarketplaceView({ products, onBuy }: MarketplaceViewProp
     return matchCat && matchSearch;
   });
 
+  const updateLanguage = (nextLanguage: string) => {
+    setLanguage(nextLanguage);
+    saveGlobalPreference('omnihub_language', nextLanguage);
+  };
+
+  const updateCurrency = (nextCurrency: string) => {
+    setCurrency(nextCurrency);
+    saveGlobalPreference('omnihub_currency', nextCurrency);
+  };
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Marketplace</h1>
-        <p className="text-sm text-slate-400">
-          Discover digital products, services, and goods from verified creators.
-        </p>
+      <div className="mb-8 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-1">{translate(language, 'marketplace')}</h1>
+          <p className="text-sm text-slate-400">
+            {translate(language, 'discover')}
+          </p>
+          <p className="mt-2 text-[11px] text-emerald-400 font-semibold">
+            {translate(language, 'globalReady')}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+          <label className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-2">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">
+              <Globe2 size={11} /> Language
+            </div>
+            <select
+              value={language}
+              onChange={(event) => updateLanguage(event.target.value)}
+              className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
+            >
+              {supportedLanguages.map((item) => (
+                <option key={item.code} value={item.code} className="bg-slate-900 text-slate-100">
+                  {item.nativeLabel}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-2">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">
+              <Coins size={11} /> Currency
+            </div>
+            <select
+              value={currency}
+              onChange={(event) => updateCurrency(event.target.value)}
+              className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
+            >
+              {supportedCurrencies.map((item) => (
+                <option key={item.code} value={item.code} className="bg-slate-900 text-slate-100">
+                  {item.code} — {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -101,7 +166,7 @@ export default function MarketplaceView({ products, onBuy }: MarketplaceViewProp
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Search products, services..."
+            placeholder={translate(language, 'search')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/20 transition-all"
@@ -134,7 +199,7 @@ export default function MarketplaceView({ products, onBuy }: MarketplaceViewProp
       </div>
 
       <p className="text-xs text-slate-500 mb-4">
-        Showing <span className="text-slate-300 font-medium">{filtered.length}</span> of {products.length} products
+        {translate(language, 'showing')} <span className="text-slate-300 font-medium">{filtered.length}</span> of {products.length} {translate(language, 'products')}
       </p>
 
       {filtered.length === 0 ? (
@@ -147,7 +212,10 @@ export default function MarketplaceView({ products, onBuy }: MarketplaceViewProp
           {filtered.map((product) => {
             const category = getProductCategory(product);
             const price = getProductPrice(product);
-            const usdPrice = getProductUsdPrice(product);
+            const sourceCurrency = getProductCurrency(product);
+            const convertedPrice = convertMoney(price, sourceCurrency, currency);
+            const formattedSourcePrice = formatMoney(price, sourceCurrency);
+            const formattedConvertedPrice = formatMoney(convertedPrice, currency);
             const rating = Number(product.rating || 4.9);
             const sold = Number(product.sales || product.total_sales || 0);
 
@@ -167,7 +235,7 @@ export default function MarketplaceView({ products, onBuy }: MarketplaceViewProp
                     {category}
                   </span>
                   <span className="absolute top-3 right-3 text-xs font-bold text-white bg-slate-900/80 backdrop-blur-sm px-2 py-1 rounded-lg">
-                    Rp {(price / 1000).toFixed(0)}K
+                    {formattedConvertedPrice}
                   </span>
                 </div>
 
@@ -213,16 +281,18 @@ export default function MarketplaceView({ products, onBuy }: MarketplaceViewProp
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className="text-base font-bold text-cyan-400">
-                        Rp {price.toLocaleString('id-ID')}
+                        {formattedConvertedPrice}
                       </div>
-                      <div className="text-[10px] text-slate-500">≈ ${usdPrice}</div>
+                      <div className="text-[10px] text-slate-500">
+                        Base: {formattedSourcePrice}
+                      </div>
                     </div>
                     <button
                       onClick={() => onBuy(product)}
                       className="flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-900 font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-lg shadow-cyan-500/20"
                     >
                       <ShoppingCart size={12} />
-                      Buy Now
+                      {translate(language, 'buyNow')}
                     </button>
                   </div>
                 </div>
