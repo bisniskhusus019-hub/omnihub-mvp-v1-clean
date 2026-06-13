@@ -15,6 +15,7 @@ import AffiliateCenter from './components/AffiliateCenter';
 import StorageVault from './components/StorageVault';
 import BusinessOS from './components/BusinessOS';
 import GrowthSuite from './components/GrowthSuite';
+import OwnerPanel from './components/OwnerPanel';
 import AuthPage from './components/AuthPage';
 import { mockProducts, mockTransactions } from './data/mockData';
 import { Lock, PowerOff } from 'lucide-react';
@@ -34,6 +35,7 @@ export type Transaction = any;
 type View =
   | 'profile'
   | 'dashboard'
+  | 'owner-panel'
   | 'business-os'
   | 'growth-suite'
   | 'marketplace'
@@ -47,7 +49,7 @@ type View =
   | 'kanban'
   | 'auth';
 
-const protectedViews: View[] = ['dashboard', 'business-os', 'growth-suite', 'invoice', 'kanban', 'storage'];
+const protectedViews: View[] = ['dashboard', 'owner-panel', 'business-os', 'growth-suite', 'invoice', 'kanban', 'storage'];
 
 function DisabledModuleCard({ name }: { name: string }) {
   return (
@@ -157,6 +159,7 @@ export default function App() {
 
   const [modules, setModules] = useState({
     marketplace: true,
+    ownerPanel: true,
     businessOS: true,
     growthSuite: true,
     community: true,
@@ -309,6 +312,12 @@ export default function App() {
             onAddProduct={handleAddProduct}
             onBuy={handleBuy}
           />
+        ) : (
+          <SellerGate onLogin={openAuth} />
+        );
+      case 'owner-panel':
+        return isAuthenticated ? (
+          modules.ownerPanel ? <OwnerPanel /> : <DisabledModuleCard name="Owner Control" />
         ) : (
           <SellerGate onLogin={openAuth} />
         );
