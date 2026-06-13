@@ -408,6 +408,7 @@ export default function App() {
         modules={modules}
         toggleModule={handleToggleModule}
         isAuthenticated={isAuthenticated}
+        isPlatformOwner={isPlatformOwner}
         onSignInClick={openAuth}
         onSignOut={handleSignOut}
       >
