@@ -19,3 +19,12 @@ export async function getOwnerPlans() {
   const { data } = await supabase.from('subscription_plans').select('*').order('price_monthly', { ascending: true });
   return data || [];
 }
+
+export async function getOwnerOrders() {
+  const { data } = await supabase
+    .from('transactions')
+    .select('id, product_id, seller_id, buyer_email, buyer_name, quantity, amount, currency, order_status, download_token, created_at, products(id,title,thumbnail_url)')
+    .order('created_at', { ascending: false })
+    .limit(25);
+  return data || [];
+}
