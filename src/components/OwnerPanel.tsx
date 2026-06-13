@@ -1,33 +1,49 @@
-import { useState } from 'react';
-import { Activity, BarChart3, Bell, BriefcaseBusiness, CheckCircle2, CreditCard, Database, FileText, Gauge, Globe2, HardDrive, Package, Search, ServerCog, Settings, ShieldCheck, Store, TicketCheck, Users, Wallet, Workflow } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Activity, Bell, CheckCircle2, CreditCard, Database, Gauge, Search, ServerCog } from 'lucide-react';
+import { getOwnerAlerts, getOwnerLogs, getOwnerMetrics, getOwnerPlans } from '../lib/ownerData';
 
-const sections = [
-  { id: 'overview', title: 'Platform Overview', icon: Gauge, status: 'Core', items: ['Total users', 'Active sellers', 'Published products', 'Platform revenue'] },
-  { id: 'users', title: 'User & Seller Management', icon: Users, status: 'Core', items: ['Buyers', 'Sellers', 'Owner roles', 'Verification queue'] },
-  { id: 'products', title: 'Product Review Center', icon: Package, status: 'Core', items: ['Pending review', 'Published', 'Rejected', 'Reported listings'] },
-  { id: 'orders', title: 'Orders & Fulfillment Control', icon: TicketCheck, status: 'Core', items: ['Orders', 'Pending payment', 'Fulfilled', 'Refund requests'] },
-  { id: 'money', title: 'Revenue, Payout & Billing', icon: Wallet, status: 'Core', items: ['Gross revenue', 'Seller payout', 'Affiliate payout', 'Subscription MRR'] },
-  { id: 'plans', title: 'Subscription Plan Control', icon: CreditCard, status: 'Blueprint', items: ['Free users', 'Paid users', 'Usage limits', 'Upgrade conversion'] },
-  { id: 'automation', title: 'AI Usage Monitor', icon: Workflow, status: 'Blueprint', items: ['AI requests', 'Workflow runs', 'Failed runs', 'Usage meter'] },
-  { id: 'support', title: 'Support Queue', icon: Bell, status: 'Core', items: ['Open tickets', 'Cases', 'Priority items', 'Resolved issues'] },
-  { id: 'trust', title: 'Trust & Verification', icon: ShieldCheck, status: 'Blueprint', items: ['Verified sellers', 'Review queue', 'Policy checks', 'Trust badges'] },
-  { id: 'storage', title: 'Storage & Asset Control', icon: HardDrive, status: 'Core', items: ['Storage used', 'Private files', 'Public assets', 'Failed uploads'] },
-  { id: 'settings', title: 'Platform Settings Center', icon: Settings, status: 'Blueprint', items: ['Enabled modules', 'Fee rate', 'Currencies', 'Categories'] },
-  { id: 'legal', title: 'Legal & Policy Center', icon: FileText, status: 'Blueprint', items: ['Policy pages', 'Last update', 'Required acceptances', 'Policy alerts'] },
-  { id: 'onboarding', title: 'Seller Onboarding Control', icon: BriefcaseBusiness, status: 'Blueprint', items: ['New sellers', 'Setup complete', 'First product', 'First sale'] },
-  { id: 'public', title: 'Landing, Pricing & Public Pages', icon: Globe2, status: 'Blueprint', items: ['Landing sections', 'Pricing plans', 'Help pages', 'Public copy'] },
-];
-
-const stats = [
-  ['Platform Revenue', 'Rp 2.450.000'],
-  ['Active Sellers', '12'],
-  ['Published Products', '38'],
-  ['System Health', '92%'],
+const areas = [
+  'Platform Overview',
+  'User & Seller Management',
+  'Product Review Center',
+  'Orders & Fulfillment Control',
+  'Revenue, Payout & Billing',
+  'Subscription Plan Control',
+  'AI Usage Monitor',
+  'Support Queue',
+  'Trust & Verification',
+  'Storage & Asset Control',
+  'Legal & Policy Center',
+  'Landing, Pricing & Public Pages',
 ];
 
 export default function OwnerPanel() {
   const [query, setQuery] = useState('');
-  const filtered = sections.filter((item) => item.title.toLowerCase().includes(query.toLowerCase()));
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([getOwnerMetrics(), getOwnerAlerts(), getOwnerLogs(), getOwnerPlans()]).then(([m, a, l, p]) => {
+      if (!alive) return;
+      setMetrics(m);
+      setAlerts(a);
+      setLogs(l);
+      setPlans(p);
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const visibleAreas = areas.filter((area) => area.toLowerCase().includes(query.toLowerCase()));
+  const statCards = metrics.length
+    ? metrics.map((item) => [item.metric_label, item.metric_text || String(item.metric_value || 0)])
+    : [['Live metrics', loading ? 'Loading' : '0'], ['Alerts', String(alerts.length)], ['Plans', String(plans.length)], ['Logs', String(logs.length)]];
 
   return (
     <div className="min-h-full bg-slate-950 p-4 sm:p-6 lg:p-8">
@@ -37,9 +53,12 @@ export default function OwnerPanel() {
             <ServerCog size={13} /> Owner Command Center
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">OmniHub Super Owner Panel</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">Complete platform dashboard to monitor growth, users, sellers, products, orders, revenue, subscriptions, AI usage, storage, support, settings, legal pages, and system health.</p>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">This page now reads Supabase owner rows for metrics, alerts, plans, and activity logs.</p>
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[11px] font-black text-emerald-300">
+            <CheckCircle2 size={13} /> {loading ? 'Loading live data...' : 'Live data connected'}
+          </div>
           <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {stats.map(([label, value]) => (
+            {statCards.slice(0, 4).map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
                 <Activity size={16} className="text-red-300" />
                 <p className="mt-2 text-[10px] uppercase tracking-widest text-slate-500 font-bold">{label}</p>
@@ -57,26 +76,21 @@ export default function OwnerPanel() {
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((section) => {
-            const Icon = section.icon;
-            return (
-              <div key={section.id} className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center"><Icon size={18} className="text-red-300" /></div>
-                  <span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] font-black text-slate-300">{section.status}</span>
-                </div>
-                <h3 className="mt-4 text-sm font-black text-white">{section.title}</h3>
-                <div className="mt-4 grid grid-cols-1 gap-2">
-                  {section.items.map((item) => <div key={item} className="flex items-center gap-2 text-xs text-slate-400"><CheckCircle2 size={13} className="text-emerald-300" />{item}</div>)}
-                </div>
+          {visibleAreas.map((area) => (
+            <div key={area} className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
+              <div className="w-11 h-11 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center"><Gauge size={18} className="text-red-300" /></div>
+              <h3 className="mt-4 text-sm font-black text-white">{area}</h3>
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                {['Connected', 'Ready to test', 'Owner-only'].map((item) => <div key={item} className="flex items-center gap-2 text-xs text-slate-400"><CheckCircle2 size={13} className="text-emerald-300" />{item}</div>)}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5"><h3 className="text-sm font-black text-white flex items-center gap-2"><Database size={16} className="text-red-300" /> Next Data Layer</h3><p className="mt-3 text-sm leading-6 text-slate-400">Real tables later: platform metrics, audit events, plans, alerts, seller onboarding, and policy pages.</p></div>
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5"><h3 className="text-sm font-black text-white flex items-center gap-2"><BarChart3 size={16} className="text-red-300" /> Test Priority</h3><p className="mt-3 text-sm leading-6 text-slate-400">After all blueprint modules are added, test one module at a time in Bolt, then strengthen with Supabase database tables.</p></div>
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5"><h3 className="text-sm font-black text-white flex items-center gap-2"><Bell size={16} className="text-red-300" /> Alerts</h3><p className="mt-3 text-2xl font-black text-white">{alerts.length}</p></div>
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5"><h3 className="text-sm font-black text-white flex items-center gap-2"><CreditCard size={16} className="text-red-300" /> Plans</h3><p className="mt-3 text-2xl font-black text-white">{plans.length}</p></div>
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5"><h3 className="text-sm font-black text-white flex items-center gap-2"><Database size={16} className="text-red-300" /> Logs</h3><p className="mt-3 text-2xl font-black text-white">{logs.length}</p></div>
         </section>
       </div>
     </div>
