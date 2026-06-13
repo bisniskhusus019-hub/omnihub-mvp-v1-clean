@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BriefcaseBusiness, CheckCircle2, Plus } from 'lucide-react';
+import { Briefcase, CheckCircle2, Plus } from 'lucide-react';
 import { addClient, getClients, getFinance, getSops } from '../lib/sellerData';
 
 type Props = { currentSeller?: any };
@@ -39,7 +39,7 @@ export default function BusinessOSLive({ currentSeller }: Props) {
       <div className="max-w-7xl mx-auto space-y-6">
         <section className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/20 p-6 sm:p-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-cyan-300 mb-4">
-            <BriefcaseBusiness size={13} /> Live Business OS
+            <Briefcase size={13} /> Live Business OS
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">OmniHub Business OS</h1>
           <p className="mt-3 text-sm text-slate-400">Connected to Supabase: clients, finance entries, and SOP documents.</p>
