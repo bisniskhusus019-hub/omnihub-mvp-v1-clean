@@ -50,6 +50,7 @@ type View =
   | 'auth';
 
 const protectedViews: View[] = ['dashboard', 'owner-panel', 'business-os', 'growth-suite', 'invoice', 'kanban', 'storage'];
+const PLATFORM_OWNER_EMAILS = ['bisniskhusus019@gmail.com'];
 
 function DisabledModuleCard({ name }: { name: string }) {
   return (
@@ -83,6 +84,22 @@ function SellerGate({ onLogin }: { onLogin: () => void }) {
         >
           Login / Register Seller
         </button>
+      </div>
+    </div>
+  );
+}
+
+function OwnerGate() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center p-6">
+      <div className="max-w-md w-full rounded-3xl border border-red-500/20 bg-slate-900/80 p-6 text-center shadow-2xl shadow-red-950/20">
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/25 flex items-center justify-center mb-4">
+          <Lock size={24} className="text-red-300" />
+        </div>
+        <h2 className="text-xl font-bold text-white">Owner Control locked</h2>
+        <p className="mt-2 text-sm text-slate-400 leading-6">
+          This area is only for the platform owner account. Sellers can use Dashboard, Business OS, Growth Suite, Storage, Invoice, and Kanban.
+        </p>
       </div>
     </div>
   );
@@ -172,6 +189,9 @@ export default function App() {
   });
 
   const isAuthenticated = Boolean(session);
+  const isPlatformOwner = Boolean(
+    session?.user?.email && PLATFORM_OWNER_EMAILS.includes(session.user.email.toLowerCase())
+  );
 
   useEffect(() => {
     const loadSession = async () => {
@@ -316,11 +336,9 @@ export default function App() {
           <SellerGate onLogin={openAuth} />
         );
       case 'owner-panel':
-        return isAuthenticated ? (
-          modules.ownerPanel ? <OwnerPanel /> : <DisabledModuleCard name="Owner Control" />
-        ) : (
-          <SellerGate onLogin={openAuth} />
-        );
+        if (!isAuthenticated) return <SellerGate onLogin={openAuth} />;
+        if (!isPlatformOwner) return <OwnerGate />;
+        return modules.ownerPanel ? <OwnerPanel /> : <DisabledModuleCard name="Owner Control" />;
       case 'business-os':
         return isAuthenticated ? (
           modules.businessOS ? <BusinessOS /> : <DisabledModuleCard name="Business OS" />
