@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_TIMEOUT_MS = 6000;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('[OmniHub] Missing Supabase environment variables. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
@@ -9,77 +10,102 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 
+function withTimeout<T>(promise: Promise<T>, label: string, fallback: T): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn(`[supabase] ${label} timed out. Using OmniHub fallback data.`);
+      resolve(fallback);
+    }, SUPABASE_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+}
+
 export const fetchProducts = async () => {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      id,
-      seller_id,
-      title,
-      slug,
-      description,
-      product_type,
-      price,
-      currency,
-      thumbnail_url,
-      file_url,
-      external_url,
-      inventory_quantity,
-      is_published,
-      total_sales,
-      view_count,
-      created_at,
-      users (
-        id,
-        username,
-        display_name,
-        avatar_url,
-        shop_name,
-        shop_slug
-      )
-    `)
-    .eq('is_published', true)
-    .order('created_at', { ascending: false });
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          seller_id,
+          title,
+          slug,
+          description,
+          product_type,
+          price,
+          currency,
+          thumbnail_url,
+          file_url,
+          external_url,
+          inventory_quantity,
+          is_published,
+          total_sales,
+          view_count,
+          created_at,
+          users (
+            id,
+            username,
+            display_name,
+            avatar_url,
+            shop_name,
+            shop_slug
+          )
+        `)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('[supabase] fetchProducts error:', error);
-    return [];
-  }
+      if (error) {
+        console.error('[supabase] fetchProducts error:', error);
+        return [];
+      }
 
-  return data || [];
+      return data || [];
+    })(),
+    'fetchProducts',
+    []
+  );
 };
 
 export const fetchTransactions = async () => {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select(`
-      id,
-      product_id,
-      seller_id,
-      buyer_email,
-      buyer_name,
-      quantity,
-      amount,
-      currency,
-      payment_method,
-      payment_status,
-      order_status,
-      download_token,
-      created_at,
-      products (
-        id,
-        title,
-        thumbnail_url
-      )
-    `)
-    .order('created_at', { ascending: false });
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          id,
+          product_id,
+          seller_id,
+          buyer_email,
+          buyer_name,
+          quantity,
+          amount,
+          currency,
+          payment_method,
+          payment_status,
+          order_status,
+          download_token,
+          created_at,
+          products (
+            id,
+            title,
+            thumbnail_url
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('[supabase] fetchTransactions error:', error);
-    return [];
-  }
+      if (error) {
+        console.error('[supabase] fetchTransactions error:', error);
+        return [];
+      }
 
-  return data || [];
+      return data || [];
+    })(),
+    'fetchTransactions',
+    []
+  );
 };
 
 export const createNewProduct = async (productData: Record<string, any>) => {
@@ -174,14 +200,20 @@ export const generateDownloadToken = async (productId: string, transactionHash: 
 };
 
 export const listStorageBuckets = async () => {
-  const { data, error } = await supabase.storage.listBuckets();
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase.storage.listBuckets();
 
-  if (error) {
-    console.error('[supabase] listStorageBuckets error:', error);
-    return [];
-  }
+      if (error) {
+        console.error('[supabase] listStorageBuckets error:', error);
+        return [];
+      }
 
-  return data || [];
+      return data || [];
+    })(),
+    'listStorageBuckets',
+    []
+  );
 };
 
 function sanitizeStorageFileName(fileName: string) {
@@ -241,17 +273,23 @@ export const createStorageSignedUrl = async (bucket: string, path: string, expir
 };
 
 export const fetchCommunityPosts = async () => {
-  const { data, error } = await supabase
-    .from('community_posts')
-    .select('*')
-    .order('created_at', { ascending: false });
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase
+        .from('community_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('[supabase] fetchCommunityPosts error:', error);
-    return [];
-  }
+      if (error) {
+        console.error('[supabase] fetchCommunityPosts error:', error);
+        return [];
+      }
 
-  return data || [];
+      return data || [];
+    })(),
+    'fetchCommunityPosts',
+    []
+  );
 };
 
 export const createCommunityPost = async (postData: Record<string, any>) => {
@@ -293,46 +331,64 @@ export const updateCommunityPostUpvotes = async (postId: string, upvotes: number
 };
 
 export const fetchAffiliatePrograms = async () => {
-  const { data, error } = await supabase
-    .from('affiliate_programs')
-    .select('*')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase
+        .from('affiliate_programs')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('[supabase] fetchAffiliatePrograms error:', error);
-    return [];
-  }
+      if (error) {
+        console.error('[supabase] fetchAffiliatePrograms error:', error);
+        return [];
+      }
 
-  return data || [];
+      return data || [];
+    })(),
+    'fetchAffiliatePrograms',
+    []
+  );
 };
 
 export const fetchAffiliates = async () => {
-  const { data, error } = await supabase
-    .from('affiliates')
-    .select('*')
-    .order('total_earnings', { ascending: false });
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase
+        .from('affiliates')
+        .select('*')
+        .order('total_earnings', { ascending: false });
 
-  if (error) {
-    console.error('[supabase] fetchAffiliates error:', error);
-    return [];
-  }
+      if (error) {
+        console.error('[supabase] fetchAffiliates error:', error);
+        return [];
+      }
 
-  return data || [];
+      return data || [];
+    })(),
+    'fetchAffiliates',
+    []
+  );
 };
 
 export const fetchAffiliateApplications = async () => {
-  const { data, error } = await supabase
-    .from('affiliate_applications')
-    .select('*')
-    .order('created_at', { ascending: false });
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase
+        .from('affiliate_applications')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('[supabase] fetchAffiliateApplications error:', error);
-    return [];
-  }
+      if (error) {
+        console.error('[supabase] fetchAffiliateApplications error:', error);
+        return [];
+      }
 
-  return data || [];
+      return data || [];
+    })(),
+    'fetchAffiliateApplications',
+    []
+  );
 };
 
 export const submitAffiliateApplication = async (applicationData: Record<string, any>) => {
@@ -383,14 +439,20 @@ export const createAffiliateRecord = async (affiliateData: Record<string, any>) 
 };
 
 export const getCurrentSession = async () => {
-  const { data, error } = await supabase.auth.getSession();
+  return withTimeout(
+    (async () => {
+      const { data, error } = await supabase.auth.getSession();
 
-  if (error) {
-    console.error('[supabase] getCurrentSession error:', error);
-    return null;
-  }
+      if (error) {
+        console.error('[supabase] getCurrentSession error:', error);
+        return null;
+      }
 
-  return data.session;
+      return data.session;
+    })(),
+    'getCurrentSession',
+    null
+  );
 };
 
 export const signInWithEmail = async ({ email, password }: { email: string; password: string }) => {
