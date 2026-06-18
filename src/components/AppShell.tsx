@@ -43,6 +43,8 @@ interface AppShellProps {
 
 const navItems = [
   { key: 'marketplace', label: 'Marketplace', icon: ShoppingBag, access: 'public' },
+  { key: 'service-requests', label: 'Service Requests', icon: Briefcase, access: 'public' },
+  { key: 'notifications', label: 'Notifications', icon: Bell, access: 'public' },
   { key: 'ai-hub', label: 'AI Hub', icon: Sparkles, access: 'public' },
   { key: 'affiliates', label: 'Affiliates', icon: Handshake, access: 'public' },
   { key: 'community', label: 'Community', icon: MessageSquare, access: 'public' },
@@ -60,6 +62,8 @@ const navItems = [
 
 const moduleKeys = [
   { key: 'marketplace', label: 'Marketplace', access: 'public' },
+  { key: 'serviceRequests', label: 'Service Requests', access: 'public' },
+  { key: 'notifications', label: 'Notifications', access: 'public' },
   { key: 'ownerPanel', label: 'Owner Control', access: 'owner' },
   { key: 'businessOS', label: 'Business OS', access: 'seller' },
   { key: 'growthSuite', label: 'Growth Suite', access: 'seller' },
@@ -96,6 +100,7 @@ export default function AppShell({ activeView, setActiveView, modules, toggleMod
     if (key === 'business-os') return modules.businessOS === false;
     if (key === 'growth-suite') return modules.growthSuite === false;
     if (key === 'owner-panel') return modules.ownerPanel === false;
+    if (key === 'service-requests') return modules.serviceRequests === false;
     return modules[key] === false;
   };
 
@@ -115,7 +120,7 @@ export default function AppShell({ activeView, setActiveView, modules, toggleMod
         </nav>
         <div className="px-5 py-4 border-t border-slate-800 space-y-3"><div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3"><div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Access Mode</div><div className="text-xs text-slate-300 leading-5">{isPlatformOwner ? 'Owner workspace unlocked.' : isAuthenticated ? 'Seller workspace unlocked.' : 'Public browsing enabled. Seller tools are locked.'}</div></div><button onClick={() => setSovereignMode(!sovereignMode)} className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${sovereignMode ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600'}`}><Zap size={12} /><span>Sovereign Mode</span><div className={`ml-auto w-2 h-2 rounded-full ${sovereignMode ? 'bg-cyan-400' : 'bg-slate-600'}`} /></button></div>
       </aside>
-      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0"><header className="sticky top-0 z-20 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center gap-4"><button className="lg:hidden text-slate-400 hover:text-white transition-colors" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button><div className="hidden sm:flex items-center gap-2 text-xs text-slate-400"><Bot size={14} className="text-cyan-400" /><span>Marketplace + AI Hub + Affiliates + Community are public. Seller dashboard and business tools require login.</span></div><div className="flex-1" /><button className="relative text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-slate-800"><Bell size={18} /><span className="absolute top-0 right-0 w-2 h-2 bg-cyan-400 rounded-full" /></button><div className="relative"><button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors"><div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500" /><span className="hidden sm:block text-xs font-medium text-slate-300">{isPlatformOwner ? 'Owner' : isAuthenticated ? 'Seller' : 'Guest'}</span><ChevronDown size={12} className="text-slate-500" /></button>{userMenuOpen && <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-xl py-2 z-50"><button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800"><Settings size={14} />Settings</button>{isAuthenticated ? <button onClick={onSignOut} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-slate-800"><LogOut size={14} />Sign out</button> : <button onClick={onSignInClick} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-cyan-400 hover:text-cyan-300 hover:bg-slate-800"><LogIn size={14} />Seller login</button>}</div>}</div></header><main className="flex-1 overflow-y-auto bg-slate-950 min-h-0">{children}</main></div>
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0"><header className="sticky top-0 z-20 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center gap-4"><button className="lg:hidden text-slate-400 hover:text-white transition-colors" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button><div className="hidden sm:flex items-center gap-2 text-xs text-slate-400"><Bot size={14} className="text-cyan-400" /><span>Marketplace + Service Requests + AI Hub + Affiliates + Community are public. Seller tools require login.</span></div><div className="flex-1" /><button onClick={() => handleNav('notifications', 'public')} className="relative text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-slate-800"><Bell size={18} /><span className="absolute top-0 right-0 w-2 h-2 bg-cyan-400 rounded-full" /></button><div className="relative"><button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors"><div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500" /><span className="hidden sm:block text-xs font-medium text-slate-300">{isPlatformOwner ? 'Owner' : isAuthenticated ? 'Seller' : 'Guest'}</span><ChevronDown size={12} className="text-slate-500" /></button>{userMenuOpen && <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-xl py-2 z-50"><button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800"><Settings size={14} />Settings</button>{isAuthenticated ? <button onClick={onSignOut} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-slate-800"><LogOut size={14} />Sign out</button> : <button onClick={onSignInClick} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-cyan-400 hover:text-cyan-300 hover:bg-slate-800"><LogIn size={14} />Seller login</button>}</div>}</div></header><main className="flex-1 overflow-y-auto bg-slate-950 min-h-0">{children}</main></div>
     </div>
   );
 }
