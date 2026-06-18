@@ -19,6 +19,7 @@ import OwnerPanel from './components/OwnerPanel';
 import AuthPage from './components/AuthPage';
 import ServiceRequestBoard from './components/ServiceRequestBoard';
 import NotificationCenter from './components/NotificationCenter';
+import PromotionCenter from './components/PromotionCenter';
 import { mockProducts, mockTransactions } from './data/mockData';
 import { Lock, PowerOff } from 'lucide-react';
 import { fetchProducts, fetchTransactions, getCurrentSession, signOutUser, supabase } from './lib/supabaseStub';
@@ -28,7 +29,7 @@ import type { SellerProfile } from './lib/sellerProfile';
 type Product = any;
 export type Transaction = any;
 
-type View = 'profile' | 'dashboard' | 'owner-panel' | 'business-os' | 'growth-suite' | 'marketplace' | 'checkout' | 'community' | 'service-requests' | 'notifications' | 'ai-hub' | 'affiliates' | 'storage' | 'fulfillment' | 'invoice' | 'kanban' | 'auth';
+type View = 'profile' | 'dashboard' | 'owner-panel' | 'business-os' | 'growth-suite' | 'marketplace' | 'checkout' | 'community' | 'service-requests' | 'notifications' | 'promotions' | 'ai-hub' | 'affiliates' | 'storage' | 'fulfillment' | 'invoice' | 'kanban' | 'auth';
 
 const protectedViews: View[] = ['dashboard', 'owner-panel', 'business-os', 'growth-suite', 'invoice', 'kanban', 'storage'];
 const PLATFORM_OWNER_EMAILS = ['bisniskhusus019@gmail.com'];
@@ -63,7 +64,7 @@ export default function App() {
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [currentSeller, setCurrentSeller] = useState<SellerProfile | null>(null);
-  const [modules, setModules] = useState({ marketplace: true, ownerPanel: true, businessOS: true, growthSuite: true, community: true, serviceRequests: true, notifications: true, kanban: true, invoice: true, aiSupport: true, aiHub: true, affiliates: true, storage: true });
+  const [modules, setModules] = useState({ marketplace: true, ownerPanel: true, businessOS: true, growthSuite: true, community: true, serviceRequests: true, notifications: true, promotions: true, kanban: true, invoice: true, aiSupport: true, aiHub: true, affiliates: true, storage: true });
   const isAuthenticated = Boolean(session);
   const isPlatformOwner = Boolean(session?.user?.email && PLATFORM_OWNER_EMAILS.includes(session.user.email.toLowerCase()));
 
@@ -95,6 +96,7 @@ export default function App() {
       case 'community': return modules.community ? <CommunityForum /> : <DisabledModuleCard name="Community" />;
       case 'service-requests': return modules.serviceRequests ? <ServiceRequestBoard /> : <DisabledModuleCard name="Service Requests" />;
       case 'notifications': return modules.notifications ? <NotificationCenter /> : <DisabledModuleCard name="Notifications" />;
+      case 'promotions': return modules.promotions ? <PromotionCenter /> : <DisabledModuleCard name="Promotion Center" />;
       case 'ai-hub': return modules.aiHub ? <AIHub /> : <DisabledModuleCard name="AI Hub" />;
       case 'affiliates': return modules.affiliates ? <AffiliateCenter /> : <DisabledModuleCard name="Affiliate Center" />;
       case 'storage': return isAuthenticated ? (modules.storage ? <StorageVault /> : <DisabledModuleCard name="Storage Vault" />) : <SellerGate onLogin={openAuth} />;
