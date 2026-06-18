@@ -1,11 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Activity, Bell, CheckCircle2, CreditCard, Database, Gauge, Search, ServerCog, ClipboardList } from 'lucide-react';
+import {
+  Activity,
+  Bell,
+  CheckCircle2,
+  ClipboardList,
+  CreditCard,
+  Database,
+  Gauge,
+  Megaphone,
+  MessageSquare,
+  Search,
+  ServerCog,
+  Store,
+  Users,
+} from 'lucide-react';
 import { getOwnerAlerts, getOwnerLogs, getOwnerMetrics, getOwnerOrders, getOwnerPlans } from '../lib/ownerData';
 
 const areas = [
   'Platform Overview',
   'User & Seller Management',
   'Product Review Center',
+  'Affiliate & Referral Control',
+  'Community Moderation',
   'Orders & Fulfillment Control',
   'Revenue, Payout & Billing',
   'Subscription Plan Control',
@@ -15,6 +31,29 @@ const areas = [
   'Storage & Asset Control',
   'Legal & Policy Center',
   'Landing, Pricing & Public Pages',
+];
+
+const platformControlLoops = [
+  {
+    title: 'Seller Supply Loop',
+    icon: Store,
+    items: ['Approve sellers', 'Review product/service listings', 'Monitor seller growth score'],
+  },
+  {
+    title: 'Affiliate Growth Loop',
+    icon: Megaphone,
+    items: ['Approve affiliates', 'Track referral links', 'Review pending commissions'],
+  },
+  {
+    title: 'Community Trust Loop',
+    icon: MessageSquare,
+    items: ['Moderate promo posts', 'Watch spam risk', 'Promote useful discussions'],
+  },
+  {
+    title: 'Buyer Revenue Loop',
+    icon: Users,
+    items: ['Monitor orders', 'Check fulfillment status', 'Resolve buyer/seller issues'],
+  },
 ];
 
 export default function OwnerPanel() {
@@ -37,24 +76,33 @@ export default function OwnerPanel() {
       setOrders(o);
       setLoading(false);
     });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const visibleAreas = areas.filter((area) => area.toLowerCase().includes(query.toLowerCase()));
   const pendingOrders = orders.filter((order) => order.order_status !== 'fulfilled');
   const statCards = metrics.length
     ? metrics.map((item) => [item.metric_label, item.metric_text || String(item.metric_value || 0)])
-    : [['Live metrics', loading ? 'Loading' : '0'], ['Order review', String(pendingOrders.length)], ['Plans', String(plans.length)], ['Logs', String(logs.length)]];
+    : [
+        ['Live metrics', loading ? 'Loading' : '0'],
+        ['Order review', String(pendingOrders.length)],
+        ['Plans', String(plans.length)],
+        ['Logs', String(logs.length)],
+      ];
 
   return (
     <div className="min-h-full bg-slate-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <section className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-red-950/20 p-6 sm:p-8">
+        <section className="rounded-3xl border border-red-500/20 bg-gradient-to-br from-slate-900 via-slate-900 to-red-950/20 p-6 sm:p-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-red-300 mb-4">
             <ServerCog size={13} /> Owner Command Center
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">OmniHub Super Owner Panel</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">Live owner control for platform metrics, alerts, plans, logs, and order review.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">OmniHub Platform Control Cockpit</h1>
+          <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-400">
+            Owner-only control for the complete OmniHub loop: sellers, listings, affiliates, community, orders, payouts, trust, and platform growth.
+          </p>
           <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[11px] font-black text-emerald-300">
             <CheckCircle2 size={13} /> {loading ? 'Loading live data...' : 'Live data connected'}
           </div>
@@ -69,9 +117,33 @@ export default function OwnerPanel() {
           </div>
         </section>
 
+        <section className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {platformControlLoops.map((loop) => {
+            const Icon = loop.icon;
+            return (
+              <div key={loop.title} className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
+                <div className="w-11 h-11 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                  <Icon size={18} className="text-red-300" />
+                </div>
+                <h3 className="mt-4 text-sm font-black text-white">{loop.title}</h3>
+                <div className="mt-4 space-y-2">
+                  {loop.items.map((item) => (
+                    <div key={item} className="flex items-start gap-2 text-xs leading-5 text-slate-400">
+                      <CheckCircle2 size={13} className="mt-0.5 text-emerald-300" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
         <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
           <div className="flex items-center justify-between gap-3 mb-4">
-            <h2 className="text-sm font-black text-white flex items-center gap-2"><ClipboardList size={16} className="text-red-300" /> Order Review Queue</h2>
+            <h2 className="text-sm font-black text-white flex items-center gap-2">
+              <ClipboardList size={16} className="text-red-300" /> Order & Fulfillment Review Queue
+            </h2>
             <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[11px] font-black text-amber-300">{pendingOrders.length} pending</span>
           </div>
           <div className="space-y-2">
@@ -96,16 +168,25 @@ export default function OwnerPanel() {
         <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4">
           <label className="relative block">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search owner area..." className="w-full rounded-2xl border border-slate-700 bg-slate-950 pl-10 pr-4 py-3 text-sm text-slate-200 outline-none focus:border-red-400" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search owner area: affiliate, community, seller, product, payout..." className="w-full rounded-2xl border border-slate-700 bg-slate-950 pl-10 pr-4 py-3 text-sm text-slate-200 outline-none focus:border-red-400" />
           </label>
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {visibleAreas.map((area) => (
             <div key={area} className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-              <div className="w-11 h-11 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center"><Gauge size={18} className="text-red-300" /></div>
+              <div className="w-11 h-11 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center">
+                <Gauge size={18} className="text-red-300" />
+              </div>
               <h3 className="mt-4 text-sm font-black text-white">{area}</h3>
-              <div className="mt-4 grid grid-cols-1 gap-2">{['Connected', 'Ready to test', 'Owner-only'].map((item) => <div key={item} className="flex items-center gap-2 text-xs text-slate-400"><CheckCircle2 size={13} className="text-emerald-300" />{item}</div>)}</div>
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                {['Connected', 'Ready to test', 'Owner-only'].map((item) => (
+                  <div key={item} className="flex items-center gap-2 text-xs text-slate-400">
+                    <CheckCircle2 size={13} className="text-emerald-300" />
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </section>
