@@ -12,7 +12,6 @@ import {
   Globe2,
   Coins,
   Copy,
-  CheckCircle,
   MessageSquare,
   Megaphone,
   Link2,
