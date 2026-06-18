@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Wallet,
 } from 'lucide-react';
+import { createDisputeCase, fetchCreditLedgerEntries, fetchDisputeCases, updateDisputeCaseStatus } from '../lib/growthData';
 
 type LedgerType = 'seller_sale' | 'affiliate_credit' | 'platform_fee' | 'refund_hold';
 type DisputeStatus = 'open' | 'reviewing' | 'resolved';
@@ -64,11 +65,51 @@ function formatMoney(amount: number, currency: string) {
   return `${currency} ${amount.toLocaleString()}`;
 }
 
+function normalizeLedger(row: any): LedgerItem {
+  return {
+    id: row.id,
+    type: (row.entry_type || 'seller_sale') as LedgerType,
+    title: row.title || 'Ledger entry',
+    amount: Number(row.amount || 0),
+    currency: row.currency || 'IDR',
+    status: (row.status || 'pending') as LedgerItem['status'],
+    party: row.party_label || 'Platform',
+  };
+}
+
+function normalizeDispute(row: any): DisputeItem {
+  return {
+    id: row.id,
+    title: row.title || 'Issue case',
+    orderRef: row.transaction_id ? `TXN-${String(row.transaction_id).slice(0, 8)}` : `CASE-${String(row.id).slice(0, 8)}`,
+    buyer: row.buyer_email || 'Guest Buyer',
+    seller: row.seller_id ? `Seller ${String(row.seller_id).slice(0, 8)}` : 'Seller Review Needed',
+    status: (row.status || 'open') as DisputeStatus,
+    reason: row.reason || 'Manual owner review needed',
+  };
+}
+
 export default function FinanceTrustCenter() {
   const [ledger, setLedger] = useState(initialLedger);
   const [disputes, setDisputes] = useState(initialDisputes);
   const [query, setQuery] = useState('');
   const [newCaseTitle, setNewCaseTitle] = useState('');
+  const [syncStatus, setSyncStatus] = useState('Supabase loading...');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [ledgerRows, disputeRows] = await Promise.all([fetchCreditLedgerEntries(), fetchDisputeCases()]);
+        if (ledgerRows.length > 0) setLedger(ledgerRows.map(normalizeLedger));
+        if (disputeRows.length > 0) setDisputes(disputeRows.map(normalizeDispute));
+        setSyncStatus(ledgerRows.length + disputeRows.length > 0 ? 'Live Supabase data' : 'Supabase ready, using demo starters');
+      } catch (error) {
+        console.warn('[FinanceTrustCenter] fallback mode:', error);
+        setSyncStatus('Local fallback mode');
+      }
+    };
+    load();
+  }, []);
 
   const filteredLedger = useMemo(() => {
     const q = query.toLowerCase();
@@ -84,30 +125,44 @@ export default function FinanceTrustCenter() {
   const heldBalance = ledger.filter((item) => item.status === 'held').reduce((sum, item) => sum + item.amount, 0);
   const ownerRevenue = ledger.filter((item) => item.type === 'platform_fee').reduce((sum, item) => sum + item.amount, 0);
 
-  const createDispute = () => {
+  const createDispute = async () => {
     if (!newCaseTitle.trim()) return;
-    setDisputes((current) => [
-      {
-        id: `d-${Date.now()}`,
-        title: newCaseTitle.trim(),
-        orderRef: `ORD-${Math.floor(Math.random() * 9000 + 1000)}`,
-        buyer: 'New Buyer',
-        seller: 'Seller Review Needed',
-        status: 'open',
-        reason: 'Manual owner review needed',
-      },
-      ...current,
-    ]);
+    const title = newCaseTitle.trim();
     setNewCaseTitle('');
+    try {
+      const saved = await createDisputeCase({ title, reason: 'Manual owner review needed' });
+      setDisputes((current) => [normalizeDispute(saved), ...current]);
+      setSyncStatus('Dispute saved to Supabase');
+    } catch (error) {
+      console.warn('[FinanceTrustCenter] dispute fallback:', error);
+      setDisputes((current) => [
+        {
+          id: `d-${Date.now()}`,
+          title,
+          orderRef: `ORD-${Math.floor(Math.random() * 9000 + 1000)}`,
+          buyer: 'New Buyer',
+          seller: 'Seller Review Needed',
+          status: 'open',
+          reason: 'Manual owner review needed',
+        },
+        ...current,
+      ]);
+      setSyncStatus('Dispute saved locally; Supabase policy needs review');
+    }
   };
 
-  const advanceDispute = (id: string) => {
-    setDisputes((current) => current.map((item) => {
-      if (item.id !== id) return item;
-      if (item.status === 'open') return { ...item, status: 'reviewing' };
-      if (item.status === 'reviewing') return { ...item, status: 'resolved' };
-      return item;
-    }));
+  const advanceDispute = async (id: string) => {
+    const target = disputes.find((item) => item.id === id);
+    if (!target) return;
+    const nextStatus = target.status === 'open' ? 'reviewing' : target.status === 'reviewing' ? 'resolved' : 'resolved';
+    setDisputes((current) => current.map((item) => item.id === id ? { ...item, status: nextStatus } : item));
+    try {
+      await updateDisputeCaseStatus(id, nextStatus);
+      setSyncStatus('Dispute status synced to Supabase');
+    } catch (error) {
+      console.warn('[FinanceTrustCenter] status fallback:', error);
+      setSyncStatus('Status saved locally; Supabase policy needs review');
+    }
   };
 
   return (
@@ -121,6 +176,7 @@ export default function FinanceTrustCenter() {
           <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-400">
             Track pending seller earnings, affiliate credit, platform fees, held balances, manual refunds, buyer issues, seller responses, and owner decisions before real payment automation is enabled.
           </p>
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-[11px] font-bold text-slate-400"><CheckCircle2 size={12} className="text-emerald-300" />{syncStatus}</div>
           <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4"><Clock size={15} className="text-amber-300" /><p className="mt-2 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Pending</p><p className="mt-1 text-xl font-black text-white">{formatMoney(pendingBalance, 'IDR')}</p></div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4"><ShieldCheck size={15} className="text-red-300" /><p className="mt-2 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Held</p><p className="mt-1 text-xl font-black text-white">{formatMoney(heldBalance, 'IDR')}</p></div>
@@ -138,16 +194,10 @@ export default function FinanceTrustCenter() {
               {filteredLedger.map((item) => (
                 <div key={item.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-black text-white">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.party} · {item.type.replace('_', ' ')}</p>
-                    </div>
+                    <div><p className="text-sm font-black text-white">{item.title}</p><p className="mt-1 text-xs text-slate-500">{item.party} · {item.type.replace('_', ' ')}</p></div>
                     <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${statusStyle[item.status]}`}>{item.status}</span>
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-lg font-black text-cyan-300">{formatMoney(item.amount, item.currency)}</span>
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-500">{item.type === 'platform_fee' ? <ArrowDownLeft size={13} /> : <ArrowUpRight size={13} />} ledger entry</span>
-                  </div>
+                  <div className="mt-3 flex items-center justify-between"><span className="text-lg font-black text-cyan-300">{formatMoney(item.amount, item.currency)}</span><span className="inline-flex items-center gap-1 text-xs text-slate-500">{item.type === 'platform_fee' ? <ArrowDownLeft size={13} /> : <ArrowUpRight size={13} />} ledger entry</span></div>
                 </div>
               ))}
             </div>
@@ -159,13 +209,7 @@ export default function FinanceTrustCenter() {
             <div className="mt-4 space-y-3">
               {filteredDisputes.map((item) => (
                 <div key={item.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-black text-white">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.orderRef} · {item.buyer} → {item.seller}</p>
-                    </div>
-                    <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${statusStyle[item.status]}`}>{item.status}</span>
-                  </div>
+                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-white">{item.title}</p><p className="mt-1 text-xs text-slate-500">{item.orderRef} · {item.buyer} → {item.seller}</p></div><span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${statusStyle[item.status]}`}>{item.status}</span></div>
                   <p className="mt-3 text-xs leading-5 text-slate-400">{item.reason}</p>
                   <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => advanceDispute(item.id)} className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-400"><CheckCircle2 size={13} />Advance status</button><button className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300"><MessageSquare size={13} />Add note</button></div>
                 </div>
